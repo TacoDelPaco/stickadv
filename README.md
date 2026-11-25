@@ -1,6 +1,8 @@
-# Cardputer-Adv FPV Simulator (EdgeTX Game-Simulator Port)
+# StickADV
 
-A 60 FPS, full-color 3D FPV racing simulator for the **M5Stack Cardputer-Adv** (`ESP32-S3FN8`, 240×135 ST7789V2, BMI270 IMU, ES8311 audio), faithfully ported from Alexey Stankevich's classic EdgeTX/OpenTX `Game-simulator.lua` and upgraded with an authentic **Betaflight Analog OSD (MAX7456 style)** and tri-mode low-latency radio controller input.
+![StickADV Cover](assets/cover.png)
+
+**StickADV** is a 60 FPS, full-color 3D FPV racing simulator for the **M5Stack Cardputer-Adv** (`ESP32-S3FN8`, 240×135 ST7789V2, BMI270 IMU, ES8311 audio), faithfully ported from Alexey Stankevich's classic EdgeTX/OpenTX `Game-simulator.lua` and upgraded with an authentic **Betaflight Analog OSD (MAX7456 style)** and tri-mode low-latency radio controller input.
 
 ## Highlights
 

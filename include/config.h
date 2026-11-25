@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 // ============================================================================
-// Cardputer-Adv FPV Simulator (EdgeTX Game-Simulator Port)
+// StickADV — 3D FPV Racing Simulator (EdgeTX Game-Simulator Port)
 // Target: M5Stack Cardputer-Adv (Stamp-S3A / ESP32-S3FN8, ST7789V2 240x135)
 // ============================================================================
 

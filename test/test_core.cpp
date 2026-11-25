@@ -1,5 +1,5 @@
 // ============================================================================
-// Host-Native Unit & Visual Verification Suite for Cardputer-Adv FPV Simulator
+// Host-Native Unit & Visual Verification Suite for StickADV
 // Tests:
 //  1. EdgeTX Classic (19B) & 2.11+ (20B) USB HID report decoding
 //  2. EdgeTX Classic & 2.11+ USB HID Report Descriptor dynamic parsing
@@ -190,7 +190,7 @@ static void testRendererAndOsdVisuals() {
 
     FpvRenderer::renderScene(fb, sim, settings, 42);
     BetaflightOsd::drawFlightOsd(fb, sim, in, settings, 42);
-    writePpm("/tmp/cardputer_fpv_flight.ppm", fb);
+    writePpm("/tmp/stickadv_flight.ppm", fb);
 
     // Also render title overlay & post-flight stats to verify zero out-of-bounds crashes
     UiMenuState ui;
@@ -202,9 +202,9 @@ static void testRendererAndOsdVisuals() {
     sim.abortToTitle();
     FpvRenderer::renderScene(fb, sim, settings, 10);
     BetaflightOsd::drawTitleOverlay(fb, sim, in, settings, ui, 10);
-    writePpm("/tmp/cardputer_fpv_title.ppm", fb);
+    writePpm("/tmp/stickadv_title.ppm", fb);
 
-    printf("[PASS] 3D Renderer + Betaflight Analog OSD rendered cleanly to /tmp/cardputer_fpv_*.ppm\n");
+    printf("[PASS] 3D Renderer + Betaflight Analog OSD rendered cleanly to /tmp/stickadv_*.ppm\n");
 }
 
 int main() {
