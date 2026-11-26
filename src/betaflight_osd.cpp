@@ -134,7 +134,7 @@ const char* inputSourceLabel(InputSource src, bool isElrs, bool imuEnabled = tru
         case InputSource::USB_HID: return "USB";
         case InputSource::BLE_HID: return isElrs ? "ELRS" : "BLE";
         case InputSource::IMU_KB:
-        default:                   return imuEnabled ? "IMU" : "KEY";
+        default:                   return imuEnabled ? "TILT" : "KEYS";
     }
 }
 
@@ -333,34 +333,47 @@ void BetaflightOsd::drawArtificialHorizon(uint16_t* fb, float rollRad, float pit
     drawHSeg(-26.0f, -20.0f,  14.0f, OSD_DIM);
     drawHSeg( 20.0f,  26.0f,  14.0f, OSD_DIM);
 
-    // 3. Betaflight Left/Right Sidebars (Left = Altitude, Right = Throttle)
-    const int barTop = cy - 22;
-    const int barH   = 44;
-    const int lx     = 14;
-    const int rx     = SCREEN_W - 15;
+    // 3. Labeled Left/Right Vertical Gauges (Left = ALT, Right = THR)
+    const int barTop = 48;
+    const int barH   = 42;
+    const int barBot = barTop + barH;
+    const int lx     = 10;
+    const int rx     = SCREEN_W - 11;
 
-    // Bracket ticks
-    drawLineOutlined(fb, lx, barTop, lx + 3, barTop, OSD_DIM);
-    drawLineOutlined(fb, lx, barTop + barH, lx + 3, barTop + barH, OSD_DIM);
-    drawLineOutlined(fb, lx, cy, lx + 2, cy, OSD_DIM);
+    // Clear gauge labels above each rail
+    drawTextOutlined(fb, 4, barTop - 11, "ALT", OSD_CYAN);
+    drawTextOutlined(fb, SCREEN_W - 22, barTop - 11, "THR", OSD_AMBER);
 
-    drawLineOutlined(fb, rx - 3, barTop, rx, barTop, OSD_DIM);
-    drawLineOutlined(fb, rx - 3, barTop + barH, rx, barTop + barH, OSD_DIM);
-    drawLineOutlined(fb, rx - 2, cy, rx, cy, OSD_DIM);
+    // Vertical rails + top/mid/bottom ticks
+    drawLineOutlined(fb, lx, barTop, lx, barBot, OSD_DIM);
+    drawLineOutlined(fb, lx - 2, barTop, lx + 2, barTop, OSD_DIM);
+    drawLineOutlined(fb, lx - 2, barBot, lx + 2, barBot, OSD_DIM);
+    drawLineOutlined(fb, lx - 1, barTop + barH / 2, lx + 2, barTop + barH / 2, OSD_DIM);
 
-    // Altitude caret on left bar (0..12m)
+    drawLineOutlined(fb, rx, barTop, rx, barBot, OSD_DIM);
+    drawLineOutlined(fb, rx - 2, barTop, rx + 2, barTop, OSD_DIM);
+    drawLineOutlined(fb, rx - 2, barBot, rx + 2, barBot, OSD_DIM);
+    drawLineOutlined(fb, rx - 2, barTop + barH / 2, rx + 1, barTop + barH / 2, OSD_DIM);
+
+    // Altitude filled level & caret on left gauge (0..12m)
     float altFrac = altM / 12.0f;
     if (altFrac < 0.0f) altFrac = 0.0f;
     if (altFrac > 1.0f) altFrac = 1.0f;
-    int altY = barTop + barH - static_cast<int>(altFrac * barH);
-    drawLineOutlined(fb, lx + 1, altY, lx + 5, altY, OSD_CYAN);
+    int altY = barBot - static_cast<int>(altFrac * barH);
+    if (altY < barBot) {
+        drawLineOutlined(fb, lx + 1, altY, lx + 1, barBot, OSD_CYAN);
+    }
+    drawLineOutlined(fb, lx + 2, altY, lx + 6, altY, OSD_CYAN);
 
-    // Throttle caret on right bar (0..100%)
+    // Throttle filled level & caret on right gauge (0..100%)
     float thrFrac = static_cast<float>(throttlePct) / 100.0f;
     if (thrFrac < 0.0f) thrFrac = 0.0f;
     if (thrFrac > 1.0f) thrFrac = 1.0f;
-    int thrY = barTop + barH - static_cast<int>(thrFrac * barH);
-    drawLineOutlined(fb, rx - 5, thrY, rx - 1, thrY, OSD_AMBER);
+    int thrY = barBot - static_cast<int>(thrFrac * barH);
+    if (thrY < barBot) {
+        drawLineOutlined(fb, rx - 1, thrY, rx - 1, barBot, OSD_AMBER);
+    }
+    drawLineOutlined(fb, rx - 6, thrY, rx - 2, thrY, OSD_AMBER);
 }
 
 void BetaflightOsd::drawFlightOsd(uint16_t* fb,
@@ -378,15 +391,11 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     // ---- Top-Left: Link Quality & Source + Gate Score ----
     uint16_t lqCol = (t.rssiPct < 45) ? OSD_RED : ((t.rssiPct < 70) ? OSD_AMBER : OSD_WHITE);
     drawIconOutlined(fb, 4, 4, OsdIcon::ANTENNA, lqCol);
-    snprintf(buf, sizeof(buf), "%s:%02d", inputSourceLabel(input.source, input.isElrsBle, settings.imuEnabled), t.rssiPct);
+    snprintf(buf, sizeof(buf), "%s %02d%%", inputSourceLabel(input.source, input.isElrsBle, settings.imuEnabled), t.rssiPct);
     drawTextOutlined(fb, 13, 4, buf, lqCol);
 
     drawIconOutlined(fb, 4, 15, OsdIcon::GATE, OSD_GREEN);
-    if (st.score >= 0) {
-        snprintf(buf, sizeof(buf), "%d HI:%d", st.score, st.bestScore);
-    } else {
-        snprintf(buf, sizeof(buf), "%d HI:%d", st.score, st.bestScore);
-    }
+    snprintf(buf, sizeof(buf), "%d BEST: %d", st.score, st.bestScore);
     drawTextOutlined(fb, 13, 15, buf, OSD_WHITE);
 
     // ---- Top-Right: Race Timer + Speed ----
@@ -405,8 +414,9 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     }
     drawTextOutlined(fb, SCREEN_W - 34, 4, buf, timeCol);
 
-    snprintf(buf, sizeof(buf), "%3dKMH", static_cast<int>(t.airspeedKmh + 0.5f));
-    drawTextOutlined(fb, SCREEN_W - 40, 15, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "%d KM/H", static_cast<int>(t.airspeedKmh + 0.5f));
+    int spdW = static_cast<int>(strlen(buf)) * 6 - 1;
+    drawTextOutlined(fb, SCREEN_W - 4 - spdW, 15, buf, OSD_WHITE);
 
     // ---- Top-Center / Center Countdown & Betaflight Warning Banners ----
     if (sim.phase() == SimPhase::COUNTDOWN) {
@@ -437,7 +447,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     snprintf(buf, sizeof(buf), "%4.1fV", t.packVoltage);
     drawTextOutlined(fb, 13, SCREEN_H - 21, buf, batCol);
 
-    snprintf(buf, sizeof(buf), "ALT %3.1fM", t.altitudeM);
+    snprintf(buf, sizeof(buf), "ALT: %3.1fM", t.altitudeM);
     drawTextOutlined(fb, 4, SCREEN_H - 11, buf, OSD_WHITE);
 
     // ---- Bottom-Center: Betaflight Craft Name & Flight Mode ----
@@ -448,13 +458,13 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 21, fmode, OSD_CYAN);
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 11, "STICKADV", OSD_WHITE);
 
-    // ---- Bottom-Right: Throttle % & Rate Profile ----
-    snprintf(buf, sizeof(buf), "THR:%d%%", t.throttlePct);
-    int thrW = static_cast<int>(strlen(buf)) * 6;
+    // ---- Bottom-Right: Throttle % & Sensitivity Profile ----
+    snprintf(buf, sizeof(buf), "THR: %d%%", t.throttlePct);
+    int thrW = static_cast<int>(strlen(buf)) * 6 - 1;
     drawTextOutlined(fb, SCREEN_W - 4 - thrW, SCREEN_H - 21, buf, OSD_WHITE);
 
-    snprintf(buf, sizeof(buf), "R:%s", rateLabel(settings.rates));
-    int rateW = static_cast<int>(strlen(buf)) * 6;
+    snprintf(buf, sizeof(buf), "SENS: %s", rateLabel(settings.rates));
+    int rateW = static_cast<int>(strlen(buf)) * 6 - 1;
     drawTextOutlined(fb, SCREEN_W - 4 - rateW, SCREEN_H - 11, buf, OSD_DIM);
 }
 
@@ -547,26 +557,26 @@ void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
     int total = st.gatesHit + st.gatesMissed;
     int acc   = total > 0 ? (st.gatesHit * 100 / total) : 0;
 
-    snprintf(buf, sizeof(buf), "GATES   : %d / %d (%d%%)", st.gatesHit, total, acc);
-    drawTextOutlined(fb, 26, 40, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "GATES     : %d / %d (%d%%)", st.gatesHit, total, acc);
+    drawTextOutlined(fb, 24, 40, buf, OSD_WHITE);
 
-    snprintf(buf, sizeof(buf), "STREAK  : %d", st.maxStreak);
-    drawTextOutlined(fb, 26, 52, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "STREAK    : %d", st.maxStreak);
+    drawTextOutlined(fb, 24, 52, buf, OSD_WHITE);
 
-    snprintf(buf, sizeof(buf), "TOP SPD : %d KM/H", static_cast<int>(st.maxSpeedKmh + 0.5f));
-    drawTextOutlined(fb, 26, 64, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "TOP SPEED : %d KM/H", static_cast<int>(st.maxSpeedKmh + 0.5f));
+    drawTextOutlined(fb, 24, 64, buf, OSD_WHITE);
 
     if (input.source == InputSource::IMU_KB) {
-        snprintf(buf, sizeof(buf), "INPUT   : %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS ONLY");
+        snprintf(buf, sizeof(buf), "INPUT     : %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS ONLY");
     } else {
-        snprintf(buf, sizeof(buf), "INPUT   : %s (%s)",
+        snprintf(buf, sizeof(buf), "INPUT     : %s (%s)",
                  inputSourceLabel(input.source, input.isElrsBle),
                  chMapLabel(settings.channelMap));
     }
-    drawTextOutlined(fb, 26, 76, buf, OSD_CYAN);
+    drawTextOutlined(fb, 24, 76, buf, OSD_CYAN);
 
-    snprintf(buf, sizeof(buf), "BATTERY : %d MAH", static_cast<int>(sim.telemetry().mahUsed + 0.5f));
-    drawTextOutlined(fb, 26, 88, buf, OSD_DIM);
+    snprintf(buf, sizeof(buf), "BAT USED  : %d MAH", static_cast<int>(sim.telemetry().mahUsed + 0.5f));
+    drawTextOutlined(fb, 24, 88, buf, OSD_DIM);
 
     drawTextCentered(fb, SCREEN_W / 2, 108, "[OK] FLY AGAIN  [M] SETTINGS", OSD_GREEN, 1);
 }
@@ -640,7 +650,7 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     int thumbY = trackY + ((trackH - thumbH) * topIdx) / (TOTAL_ITEMS - VISIBLE);
     fillRectAlpha(fb, trackX, thumbY, 3, thumbH, OSD_CYAN, 210);
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "ARROWS:MOVE  OK:SET  DEL:BACK", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "ARROWS: MOVE  OK: SET  DEL: BACK", OSD_DIM, 1);
 }
 
 void BetaflightOsd::drawStickMonitor(uint16_t* fb,
@@ -665,7 +675,7 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
     const float axisVal[4]  = {input.roll, input.pitch, input.throttle, input.yaw};
 
     for (int i = 0; i < 4; ++i) {
-        int y = 21 + i * 13;
+        int y = 19 + i * 11;
         drawTextOutlined(fb, 10, y, axisName[i], OSD_WHITE);
         int bx = 44, bw = 72, bh = 8;
         drawRect(fb, bx, y, bw, bh, OSD_DIM);
@@ -683,24 +693,40 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
 
     // Right column: Raw CH1..CH4 in microseconds
     for (int i = 0; i < 4; ++i) {
-        int y = 21 + i * 13;
+        int y = 19 + i * 11;
         int us = 1500 + static_cast<int>(input.rawCh[i] * 500.0f);
-        snprintf(buf, sizeof(buf), "CH%d:%4d", i + 1, us);
+        snprintf(buf, sizeof(buf), "CH%d: %4d", i + 1, us);
         drawTextOutlined(fb, 124, y, buf, OSD_WHITE);
     }
 
     // Live Tilt + ARM
-    snprintf(buf, sizeof(buf), "TILT R:%+3.0f  P:%+3.0f  ARM:%s",
+    snprintf(buf, sizeof(buf), "TILT R:%+3.0f  P:%+3.0f  ARM: %s",
              ui.imuRollDeg, ui.imuPitchDeg, input.armSwitch ? "ON" : "OFF");
-    drawTextOutlined(fb, 10, 76, buf, ui.imuPresent ? OSD_CYAN : OSD_RED);
+    drawTextOutlined(fb, 10, 67, buf, ui.imuPresent ? OSD_CYAN : OSD_RED);
 
-    // Live USB Host Status & Packet Count
-    snprintf(buf, sizeof(buf), "USB: %s (%lu)", ui.usbStatus, static_cast<unsigned long>(ui.usbPkts));
-    drawTextOutlined(fb, 10, 88, buf, ui.usbConnected ? OSD_GREEN : OSD_AMBER);
+    // Live USB Host Status (show packet count only when connected/active)
+    if (ui.usbConnected || ui.usbPkts > 0) {
+        snprintf(buf, sizeof(buf), "USB: %s  %lu PKT", ui.usbStatus, static_cast<unsigned long>(ui.usbPkts));
+    } else {
+        snprintf(buf, sizeof(buf), "USB: %s", ui.usbStatus);
+    }
+    drawTextOutlined(fb, 10, 78, buf, ui.usbConnected ? OSD_GREEN : OSD_AMBER);
 
-    // Live BLE Host Status & Packet Count
-    snprintf(buf, sizeof(buf), "BLE: %s (%lu)", ui.bleStatus, static_cast<unsigned long>(ui.blePkts));
-    drawTextOutlined(fb, 10, 100, buf, ui.bleConnected ? OSD_GREEN : OSD_CYAN);
+    // Live BLE Host Status (show packet count only when connected/active)
+    if (ui.bleConnected || ui.blePkts > 0) {
+        snprintf(buf, sizeof(buf), "BLE: %s  %lu PKT", ui.bleStatus, static_cast<unsigned long>(ui.blePkts));
+    } else {
+        snprintf(buf, sizeof(buf), "BLE: %s", ui.bleStatus);
+    }
+    drawTextOutlined(fb, 10, 89, buf, ui.bleConnected ? OSD_GREEN : OSD_CYAN);
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "[C]ZERO [B]BLE [X]UNPAIR [DEL]BACK", OSD_DIM, 1);
+    // Subtle divider above clean 2x2 shortcut grid
+    for (int px = 12; px < SCREEN_W - 12; ++px) {
+        putPixel(fb, px, 101, blend565(fb[101 * SCREEN_W + px], OSD_GREEN, 90));
+    }
+
+    drawTextOutlined(fb, 16,  106, "[C] ZERO TILT",  OSD_DIM);
+    drawTextOutlined(fb, 126, 106, "[B] BLE RADIO",  OSD_DIM);
+    drawTextOutlined(fb, 16,  118, "[X] FORGET BLE", OSD_DIM);
+    drawTextOutlined(fb, 126, 118, "[DEL] BACK",     OSD_DIM);
 }
