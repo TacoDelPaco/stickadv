@@ -54,6 +54,14 @@
 3. Select **USB Joystick (HID)** on your EdgeTX radio. The OSD automatically switches to `USB:99`.
 4. Choose your transmitter channel order (`AETR`, `TAER`, or `AERT`) in **`[M] SETUP → CH MAPPING`**.
 
+## Pre-Built Firmware (`dist/`)
+
+Ready-to-flash ESP32-S3 binaries for **M5Stack Cardputer-Adv** are included in `dist/`:
+
+- **[`dist/stickadv.bin`](dist/stickadv.bin)** *(App binary — recommended for **M5Launcher**)*: Copy to your microSD card (or upload via M5Launcher WebUI / OTA) and install directly without overwriting M5Launcher or NVS settings. Also flashable via `esptool` at offset `0x10000`.
+- **[`dist/stickadv-merged.bin`](dist/stickadv-merged.bin)** *(Full merged image — for **M5Burner** / standalone flash)*: Complete `0x0000` image (bootloader + partition table + `boot_app0` + app) ready to publish/flash with **M5Burner** or `esptool.py --chip esp32s3 write_flash 0x0 dist/stickadv-merged.bin` (also recognized by M5Launcher).
+- **[`assets/cover.png`](assets/cover.png)**: 800×450 M5Burner / M5Launcher cover image.
+
 ## Building & Flashing
 
 ### Prerequisites
