@@ -36,7 +36,6 @@
 |---|---|
 | **Tilt Left / Right** (or `A`/`D`, `,`/`/`) | Roll (move left / right + camera bank) |
 | **Tilt Up / Down** (or `W`/`S`, `;`/`.`) | Climb / Dive altitude (or Speed in `TILT UP/DOWN = SPEED` mode) |
-| **`Space`** | Speed Boost (faster forward) |
 | **`Aa` (`Shift`)** | Brake (slow down) |
 
 ## Connecting an EdgeTX / ExpressLRS Radio

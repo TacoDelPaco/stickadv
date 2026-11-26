@@ -8,7 +8,6 @@
 // - Arrow Keys (; . , / with or without Fn, or WASD):
 //     Left / Right = Roll left/right
 //     Up / Down    = Climb / Dive altitude
-//     Space        = Speed boost (faster forward)
 //     Shift        = Brake / slow down
 // - BMI270 IMU (when imuEnabled == true):
 //     Tilt Left / Right = Roll left/right (corrected Cardputer-Adv sign!)
@@ -21,7 +20,6 @@ struct KeyFlightState {
     bool down  = false; // Down Arrow (Fn+. or .) or S
     bool left  = false; // Left Arrow (Fn+, or ,) or A
     bool right = false; // Right Arrow (Fn+/ or /) or D
-    bool boost = false; // Space (turbo forward)
     bool brake = false; // Shift (slow down)
 };
 

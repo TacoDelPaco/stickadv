@@ -398,7 +398,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     snprintf(buf, sizeof(buf), "%d BEST: %d", st.score, st.bestScore);
     drawTextOutlined(fb, 13, 15, buf, OSD_WHITE);
 
-    // ---- Top-Right: Race Timer + Speed ----
+    // ---- Top-Right: Race Timer + Throttle % ----
     bool lowTime = (settings.gameMode == GameMode::RACE_30S && sim.remainingSec() < 5.0f &&
                     sim.phase() == SimPhase::FLYING);
     uint16_t timeCol = (lowTime && ((frameCount / 10) & 1)) ? OSD_RED : OSD_WHITE;
@@ -414,9 +414,9 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     }
     drawTextOutlined(fb, SCREEN_W - 34, 4, buf, timeCol);
 
-    snprintf(buf, sizeof(buf), "%d KM/H", static_cast<int>(t.airspeedKmh + 0.5f));
-    int spdW = static_cast<int>(strlen(buf)) * 6 - 1;
-    drawTextOutlined(fb, SCREEN_W - 4 - spdW, 15, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "THR: %d%%", t.throttlePct);
+    int thrW = static_cast<int>(strlen(buf)) * 6 - 1;
+    drawTextOutlined(fb, SCREEN_W - 4 - thrW, 15, buf, OSD_WHITE);
 
     // ---- Top-Center / Center Countdown & Betaflight Warning Banners ----
     if (sim.phase() == SimPhase::COUNTDOWN) {
@@ -458,11 +458,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 21, fmode, OSD_CYAN);
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 11, "STICKADV", OSD_WHITE);
 
-    // ---- Bottom-Right: Throttle % & Sensitivity Profile ----
-    snprintf(buf, sizeof(buf), "THR: %d%%", t.throttlePct);
-    int thrW = static_cast<int>(strlen(buf)) * 6 - 1;
-    drawTextOutlined(fb, SCREEN_W - 4 - thrW, SCREEN_H - 21, buf, OSD_WHITE);
-
+    // ---- Bottom-Right: Sensitivity Profile ----
     snprintf(buf, sizeof(buf), "SENS: %s", rateLabel(settings.rates));
     int rateW = static_cast<int>(strlen(buf)) * 6 - 1;
     drawTextOutlined(fb, SCREEN_W - 4 - rateW, SCREEN_H - 11, buf, OSD_DIM);

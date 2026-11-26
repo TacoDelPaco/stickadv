@@ -69,7 +69,6 @@ KeyFlightState sampleFlightKeys() {
     k.down  = ks.down  || kb.isKeyPressed('.') || kb.isKeyPressed('s') || kb.isKeyPressed('S');
     k.left  = ks.left  || kb.isKeyPressed(',') || kb.isKeyPressed('a') || kb.isKeyPressed('A');
     k.right = ks.right || kb.isKeyPressed('/') || kb.isKeyPressed('d') || kb.isKeyPressed('D');
-    k.boost = ks.space || kb.isKeyPressed(' ');
     k.brake = ks.shift;
     return k;
 }

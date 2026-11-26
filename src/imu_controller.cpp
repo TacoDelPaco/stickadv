@@ -131,18 +131,16 @@ void ImuController::update(float dt, const KeyFlightState& keys, const SimSettin
         // Intuitive Handheld / Arrow-Key Mode:
         //   Left/Right (arrows or tilt) -> X steering
         //   Up/Down    (arrows or tilt) -> Climb / Dive altitude
-        //   Space / Shift               -> Speed boost / Brake
+        //   Shift                       -> Brake
         finalThr = useKbVert ? _kbVert : imuTilt;
-        if (keys.boost)      finalPitch = 0.85f;
-        else if (keys.brake) finalPitch = 0.08f;
+        if (keys.brake) finalPitch = 0.08f;
     } else {
         // Classic TILT_SPD mode:
         //   Tilt forward/back -> Forward Speed (pitch)
         //   Up/Down arrows    -> Altitude (throttle)
         finalThr   = _kbVert;
         finalPitch = clampf(0.42f - imuTilt * 0.58f, 0.02f, 1.0f);
-        if (keys.boost)      finalPitch = 0.90f;
-        else if (keys.brake) finalPitch = 0.05f;
+        if (keys.brake) finalPitch = 0.05f;
     }
 
     outInput.roll      = clampf(finalRoll, -1.0f, 1.0f);
