@@ -129,13 +129,14 @@ enum class ImuMode : uint8_t {
 struct SimSettings {
     GameMode         gameMode     = GameMode::RACE_30S;
     ChannelMap       channelMap   = ChannelMap::AETR;
-    RateProfile      rates        = RateProfile::RATE_MID;
+    RateProfile      rates        = RateProfile::RATE_LOW;
     bool             camTilt      = true;   // Dynamic roll/pitch FPV camera horizon
     bool             analogFx     = true;   // Subtle CRT scanlines + RF static bursts
     uint8_t          volumePct    = 20;     // 0..100% (0 = mute), gentle default for ES8311
     bool             imuEnabled   = true;   // Toggle BMI270 tilt input (OFF = pure Arrow keys)
     ImuMode          imuMode      = ImuMode::TILT_ALT;
     bool             imuInvertY   = false;  // Flip tilt up/down direction if preferred
+    bool             imuInvertX   = false;  // Flip tilt left/right direction if preferred
     OsdBatterySource osdBattery   = OsdBatterySource::SIM_4S;
 };
 

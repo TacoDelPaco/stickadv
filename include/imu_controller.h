@@ -37,7 +37,7 @@ public:
     // Map raw BMI270 Euler deltas into normalized [-1..+1] pilot roll & tilt
     static void computeTiltAxes(float rawRollDeg, float rawPitchDeg,
                                 float zeroRollDeg, float zeroPitchDeg,
-                                bool invertY, float& outRoll, float& outTilt);
+                                bool invertX, bool invertY, float& outRoll, float& outTilt);
 
 private:
     bool  _imuPresent    = false;

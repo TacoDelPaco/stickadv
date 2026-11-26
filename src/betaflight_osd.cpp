@@ -583,7 +583,7 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     fillRectAlpha(fb, 0, 0, SCREEN_W, SCREEN_H, OSD_PANEL, 235);
     drawRect(fb, 4, 4, SCREEN_W - 8, SCREEN_H - 8, OSD_CYAN);
 
-    constexpr int TOTAL_ITEMS = 12;
+    constexpr int TOTAL_ITEMS = 13;
     char hdr[28];
     snprintf(hdr, sizeof(hdr), "SETTINGS  %d/%d", ui.selectedItem + 1, TOTAL_ITEMS);
     drawTextCentered(fb, SCREEN_W / 2, 9, hdr, OSD_AMBER, 1);
@@ -594,6 +594,7 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
         "TILT FLY",
         "TILT UP/DOWN",
         "INVERT TILT",
+        "INVERT X",
         "SENSITIVITY",
         "CAMERA TILT",
         "CRT EFFECT",
@@ -610,15 +611,16 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     snprintf(vals[2], sizeof(vals[2]), "%s", settings.imuEnabled ? "ON" : "OFF");
     snprintf(vals[3], sizeof(vals[3]), "%s", settings.imuMode == ImuMode::TILT_ALT ? "ALTITUDE" : "SPEED");
     snprintf(vals[4], sizeof(vals[4]), "%s", settings.imuInvertY ? "ON" : "OFF");
-    snprintf(vals[5], sizeof(vals[5]), "%s", rateLabel(settings.rates));
-    snprintf(vals[6], sizeof(vals[6]), "%s", settings.camTilt ? "ON" : "OFF");
-    snprintf(vals[7], sizeof(vals[7]), "%s", settings.analogFx ? "ON" : "OFF");
-    snprintf(vals[8], sizeof(vals[8]), "%s", settings.osdBattery == OsdBatterySource::SIM_4S ? "SIM 4S" : "DEVICE");
-    snprintf(vals[9], sizeof(vals[9]), "%s", chMapLabel(settings.channelMap));
-    if (ui.bleConnected)      snprintf(vals[10], sizeof(vals[10]), "DISCONNECT");
-    else if (ui.bleScanning)  snprintf(vals[10], sizeof(vals[10]), "SCANNING");
-    else                      snprintf(vals[10], sizeof(vals[10]), "SCAN");
-    snprintf(vals[11], sizeof(vals[11]), "CLEAR");
+    snprintf(vals[5], sizeof(vals[5]), "%s", settings.imuInvertX ? "ON" : "OFF");
+    snprintf(vals[6], sizeof(vals[6]), "%s", rateLabel(settings.rates));
+    snprintf(vals[7], sizeof(vals[7]), "%s", settings.camTilt ? "ON" : "OFF");
+    snprintf(vals[8], sizeof(vals[8]), "%s", settings.analogFx ? "ON" : "OFF");
+    snprintf(vals[9], sizeof(vals[9]), "%s", settings.osdBattery == OsdBatterySource::SIM_4S ? "SIM 4S" : "DEVICE");
+    snprintf(vals[10], sizeof(vals[10]), "%s", chMapLabel(settings.channelMap));
+    if (ui.bleConnected)      snprintf(vals[11], sizeof(vals[11]), "DISCONNECT");
+    else if (ui.bleScanning)  snprintf(vals[11], sizeof(vals[11]), "SCANNING");
+    else                      snprintf(vals[11], sizeof(vals[11]), "SCAN");
+    snprintf(vals[12], sizeof(vals[12]), "CLEAR");
 
     constexpr int VISIBLE = 7;
     int topIdx = ui.selectedItem - 3;

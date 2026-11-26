@@ -31,7 +31,7 @@ enum class AppScreen : uint8_t {
     STICK_MON = 2,
 };
 
-constexpr int SETTINGS_COUNT = 12;
+constexpr int SETTINGS_COUNT = 13;
 
 M5Canvas      g_canvas(&M5Cardputer.Display);
 uint16_t*     g_fb = nullptr;
@@ -123,28 +123,31 @@ void cycleSettingItem(int idx, int delta) {
         case 4: // INVERT TILT
             g_settings.imuInvertY = !g_settings.imuInvertY;
             break;
-        case 5: // SENSITIVITY
+        case 5: // INVERT X
+            g_settings.imuInvertX = !g_settings.imuInvertX;
+            break;
+        case 6: // SENSITIVITY
             g_settings.rates = static_cast<RateProfile>(
                 (static_cast<int>(g_settings.rates) + delta + static_cast<int>(RateProfile::COUNT)) %
                 static_cast<int>(RateProfile::COUNT));
             break;
-        case 6: // CAMERA TILT
+        case 7: // CAMERA TILT
             g_settings.camTilt = !g_settings.camTilt;
             break;
-        case 7: // CRT EFFECT
+        case 8: // CRT EFFECT
             g_settings.analogFx = !g_settings.analogFx;
             break;
-        case 8: // OSD BATTERY
+        case 9: // OSD BATTERY
             g_settings.osdBattery = static_cast<OsdBatterySource>(
                 (static_cast<int>(g_settings.osdBattery) + delta + static_cast<int>(OsdBatterySource::COUNT)) %
                 static_cast<int>(OsdBatterySource::COUNT));
             break;
-        case 9: // CHANNEL MAP
+        case 10: // CHANNEL MAP
             g_settings.channelMap = static_cast<ChannelMap>(
                 (static_cast<int>(g_settings.channelMap) + delta + static_cast<int>(ChannelMap::COUNT)) %
                 static_cast<int>(ChannelMap::COUNT));
             break;
-        case 10: // BLE RADIO
+        case 11: // BLE RADIO
             if (g_inputMgr.isBleConnected()) {
                 g_inputMgr.disconnectBle();
             } else if (g_inputMgr.isBleScanning()) {
@@ -153,7 +156,7 @@ void cycleSettingItem(int idx, int delta) {
                 g_inputMgr.startBleScan();
             }
             return;
-        case 11: // BLE PAIRING
+        case 12: // BLE PAIRING
             g_inputMgr.clearBleBonds();
             g_sim.notifyToast("BLE UNPAIRED", 1.2f);
             return;

@@ -47,12 +47,13 @@ inline float stepKeyAxis(float current, bool posHeld, bool negHeld,
 
 void ImuController::computeTiltAxes(float rawRollDeg, float rawPitchDeg,
                                     float zeroRollDeg, float zeroPitchDeg,
-                                    bool invertY, float& outRoll, float& outTilt) {
+                                    bool invertX, bool invertY, float& outRoll, float& outTilt) {
     // Cardputer-Adv BMI270 X and Y axes are negated relative to pilot/screen frame:
     //  - tilting right  -> positive roll (+1.0)
     //  - tilting up     -> positive tilt (+1.0 = climb in TILT_ALT)
     float relRoll  = -(rawRollDeg  - zeroRollDeg);
     float relPitch = -(rawPitchDeg - zeroPitchDeg);
+    if (invertX) relRoll  = -relRoll;
     if (invertY) relPitch = -relPitch;
 
     outRoll = applyDeadzone(clampf(relRoll  / MAX_TILT_ROLL_DEG,  -1.0f, 1.0f), 0.07f);
@@ -108,7 +109,7 @@ void ImuController::update(float dt, const KeyFlightState& keys, const SimSettin
 
         if (settings.imuEnabled) {
             computeTiltAxes(_rollDeg, _pitchDeg, _zeroRollDeg, _zeroPitchDeg,
-                            settings.imuInvertY, imuRoll, imuTilt);
+                            settings.imuInvertX, settings.imuInvertY, imuRoll, imuTilt);
         }
     }
 #endif

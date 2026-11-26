@@ -52,10 +52,10 @@ float SimEngine::applyExpo(float v, float expo) const {
 
 float SimEngine::rateMultiplier(RateProfile r) const {
     switch (r) {
-        case RateProfile::RATE_LOW:  return 0.72f;
-        case RateProfile::RATE_HIGH: return 1.32f;
-        case RateProfile::RATE_MID:
-        default:                     return 1.00f;
+        case RateProfile::RATE_MID:  return 0.92f;
+        case RateProfile::RATE_HIGH: return 1.15f;
+        case RateProfile::RATE_LOW:
+        default:                     return 0.72f;
     }
 }
 

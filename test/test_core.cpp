@@ -207,12 +207,12 @@ static void testRendererAndOsdVisuals() {
     BetaflightOsd::drawTitleOverlay(fb, sim, in, settings, ui, 10);
     writePpm("/tmp/stickadv_title.ppm", fb);
 
-    for (int sel = 0; sel < 12; ++sel) {
+    for (int sel = 0; sel < 13; ++sel) {
         FpvRenderer::renderScene(fb, sim, settings, 10);
         ui.selectedItem = sel;
         BetaflightOsd::drawSettingsMenu(fb, settings, ui);
         if (sel == 2)  writePpm("/tmp/stickadv_settings_top.ppm", fb);
-        if (sel == 10) writePpm("/tmp/stickadv_settings_bot.ppm", fb);
+        if (sel == 11) writePpm("/tmp/stickadv_settings_bot.ppm", fb);
     }
     FpvRenderer::renderScene(fb, sim, settings, 10);
     BetaflightOsd::drawStickMonitor(fb, in, settings, ui);
@@ -228,19 +228,26 @@ static void testRendererAndOsdVisuals() {
 static void testImuAndKeyboardControls() {
     // 1. Verify IMU pitch axis is flipped relative to raw sensor pitch (and roll remains negated)
     float roll = 0.0f, tilt = 0.0f;
-    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, false, roll, tilt);
+    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, false, false, roll, tilt);
     assert(roll < -0.35f);
     assert(tilt < -0.35f);
 
     // Verify invertY flips tilt back to positive while leaving roll untouched
-    float rollInv = 0.0f, tiltInv = 0.0f;
-    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, true, rollInv, tiltInv);
-    assert(nearf(rollInv, roll, 0.001f));
-    assert(nearf(tiltInv, -tilt, 0.001f));
+    float rollInvY = 0.0f, tiltInvY = 0.0f;
+    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, false, true, rollInvY, tiltInvY);
+    assert(nearf(rollInvY, roll, 0.001f));
+    assert(nearf(tiltInvY, -tilt, 0.001f));
 
-    // 2. Verify lowered keyboard sensitivity, smooth micro-tap ramp, and crisp stop
+    // Verify invertX flips roll back to positive while leaving tilt untouched
+    float rollInvX = 0.0f, tiltInvX = 0.0f;
+    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, true, false, rollInvX, tiltInvX);
+    assert(nearf(rollInvX, -roll, 0.001f));
+    assert(nearf(tiltInvX, tilt, 0.001f));
+
+    // 2. Verify default sensitivity is LOW, and lowered keyboard sensitivity works cleanly
     ImuController ctrl;
     SimSettings settings;
+    assert(settings.rates == RateProfile::RATE_LOW);
     settings.imuEnabled = false;
     PilotInput in;
     KeyFlightState keys;

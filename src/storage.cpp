@@ -41,6 +41,7 @@ void SimStorage::loadSettings(SimSettings& s) {
     s.analogFx   = g_prefs.getBool("analog_fx", s.analogFx);
     s.imuEnabled = g_prefs.getBool("imu_on",    s.imuEnabled);
     s.imuInvertY = g_prefs.getBool("imu_invy",  s.imuInvertY);
+    s.imuInvertX = g_prefs.getBool("imu_invx",  s.imuInvertX);
     uint8_t vol  = g_prefs.getUChar("vol_pct",  s.volumePct);
     s.volumePct  = (vol > 100) ? 20 : vol;
 }
@@ -56,6 +57,7 @@ void SimStorage::saveSettings(const SimSettings& s) {
     g_prefs.putBool("analog_fx",  s.analogFx);
     g_prefs.putBool("imu_on",     s.imuEnabled);
     g_prefs.putBool("imu_invy",   s.imuInvertY);
+    g_prefs.putBool("imu_invx",   s.imuInvertX);
     g_prefs.putUChar("vol_pct",   s.volumePct);
 }
 
