@@ -198,6 +198,8 @@ static void testRendererAndOsdVisuals() {
     ui.usbConnected = false;
     ui.bleConnected = true;
     strcpy(ui.blePeerName, "ELRS JOYSTICK");
+    strcpy(ui.usbStatus, "WAITING");
+    strcpy(ui.bleStatus, "ELRS JOYSTICK");
     in.source    = InputSource::BLE_HID;
     in.isElrsBle = true;
     sim.abortToTitle();
@@ -206,11 +208,19 @@ static void testRendererAndOsdVisuals() {
     writePpm("/tmp/stickadv_title.ppm", fb);
 
     for (int sel = 0; sel < 12; ++sel) {
+        FpvRenderer::renderScene(fb, sim, settings, 10);
         ui.selectedItem = sel;
         BetaflightOsd::drawSettingsMenu(fb, settings, ui);
+        if (sel == 2)  writePpm("/tmp/stickadv_settings_top.ppm", fb);
+        if (sel == 10) writePpm("/tmp/stickadv_settings_bot.ppm", fb);
     }
+    FpvRenderer::renderScene(fb, sim, settings, 10);
     BetaflightOsd::drawStickMonitor(fb, in, settings, ui);
+    writePpm("/tmp/stickadv_inputs.ppm", fb);
+
+    FpvRenderer::renderScene(fb, sim, settings, 10);
     BetaflightOsd::drawPostFlightStats(fb, sim, in, settings, 10);
+    writePpm("/tmp/stickadv_postflight.ppm", fb);
 
     printf("[PASS] 3D Renderer + Betaflight Analog OSD rendered cleanly to /tmp/stickadv_*.ppm\n");
 }

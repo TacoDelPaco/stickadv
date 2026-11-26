@@ -109,7 +109,7 @@ class BleClientCallbacks : public NimBLEClientCallbacks {
     }
 
     void onDisconnect(NimBLEClient* client) override {
-        int rc = client ? client->getLastError() : 0;
+        (void)client;
         g_ble.connected = false;
         g_ble.isElrs    = false;
         portENTER_CRITICAL(&g_ble.lock);
@@ -117,9 +117,7 @@ class BleClientCallbacks : public NimBLEClientCallbacks {
         g_ble.peerName[0] = '\0';
         portEXIT_CRITICAL(&g_ble.lock);
         if (!g_ble.connecting) {
-            char msg[28];
-            snprintf(msg, sizeof(msg), "DISC (%d)", rc);
-            setStatus(msg);
+            setStatus("DISCONNECTED");
         }
     }
 
@@ -182,8 +180,7 @@ static bool connectToPendingDevice() {
     bool elrsFlag = nameIsElrs(devName);
 
     char msg[28];
-    snprintf(msg, sizeof(msg), "CONN:%s", devName.empty() ? "HID" : devName.c_str());
-    setStatus(msg);
+    setStatus("CONNECTING...");
 
     if (!g_ble.client) {
         g_ble.client = NimBLEDevice::createClient();
@@ -204,8 +201,7 @@ static bool connectToPendingDevice() {
     delete dev;
 
     if (!ok || !g_ble.client->isConnected()) {
-        snprintf(msg, sizeof(msg), "ERR:CONN (%d)", g_ble.client->getLastError());
-        setStatus(msg);
+        setStatus("CONN ERR");
         g_ble.connecting = false;
         return false;
     }
@@ -214,22 +210,22 @@ static bool connectToPendingDevice() {
     vTaskDelay(pdMS_TO_TICKS(120));
 
     // Step 2: Optional security elevation (non-fatal if peer doesn't mandate pairing)
-    setStatus("BLE:PAIR");
+    setStatus("PAIRING...");
     if (!g_ble.client->secureConnection()) {
         // Some peers fail on stale bond — clear bonds and continue gracefully if still connected
         if (!g_ble.client->isConnected()) {
             NimBLEDevice::deleteAllBonds();
-            setStatus("ERR:PAIR");
+            setStatus("PAIR ERR");
             g_ble.connecting = false;
             return false;
         }
     }
 
     // Step 3: Discover HID Service (0x1812)
-    setStatus("BLE:GATT");
+    setStatus("DISCOVERING...");
     NimBLERemoteService* hidSvc = g_ble.client->getService(UUID_HID_SERVICE);
     if (!hidSvc) {
-        setStatus("ERR:NO_HID");
+        setStatus("NO HID ERR");
         g_ble.client->disconnect();
         g_ble.connecting = false;
         return false;
@@ -248,7 +244,7 @@ static bool connectToPendingDevice() {
     }
 
     // Step 4: Parse HID Report Map (0x2A4B)
-    setStatus("BLE:MAP");
+    setStatus("READING MAP...");
     HidReportLayout parsedLayout;
     bool gotDesc = false;
     NimBLERemoteCharacteristic* mapChr = hidSvc->getCharacteristic(UUID_HID_REPORT_MAP);
@@ -276,7 +272,7 @@ static bool connectToPendingDevice() {
     }
 
     // Step 5: Subscribe to all notify-capable 0x2A4D Report characteristics
-    setStatus("BLE:SUB");
+    setStatus("SUBSCRIBING...");
     int subscribed = 0;
     const auto* chars = hidSvc->getCharacteristics(true);
     if (chars) {
@@ -291,7 +287,7 @@ static bool connectToPendingDevice() {
     }
 
     if (subscribed == 0 || !g_ble.client->isConnected()) {
-        setStatus("ERR:SUB");
+        setStatus("SETUP ERR");
         if (g_ble.client->isConnected()) g_ble.client->disconnect();
         g_ble.connecting = false;
         return false;
@@ -312,7 +308,7 @@ static bool connectToPendingDevice() {
     g_ble.connected = true;
     portEXIT_CRITICAL(&g_ble.lock);
 
-    snprintf(msg, sizeof(msg), "OK:%s", g_ble.peerName);
+    snprintf(msg, sizeof(msg), "%s", g_ble.peerName);
     setStatus(msg);
     g_ble.connecting = false;
     return true;
@@ -361,7 +357,7 @@ void BleHidHost::startScan(uint32_t durationSec) {
     scan->start(durationSec, [](NimBLEScanResults) {
         g_ble.scanning = false;
         if (!g_ble.connected && !g_ble.connecting && !g_ble.wantConnect) {
-            setStatus("NO BLE TX");
+            setStatus("NONE FOUND");
         }
     }, false);
 }
@@ -388,7 +384,7 @@ void BleHidHost::disconnect() {
 void BleHidHost::clearBonds() {
     disconnect();
     NimBLEDevice::deleteAllBonds();
-    setStatus("BONDS CLR");
+    setStatus("UNPAIRED");
 }
 
 void BleHidHost::poll(bool allowBackgroundReconnect) {

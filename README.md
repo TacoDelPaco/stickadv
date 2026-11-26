@@ -24,20 +24,20 @@
 ### Global & Menu Keys
 | Key | Action |
 |---|---|
-| `Enter` / `G0` (`BtnA`) / EdgeTX `ARM` (`CH5` or `Btn1`) | Arm & Start / Restart Run |
-| `Del` / `` ` `` (ESC) | Abort Run / Back |
+| `OK` (`Enter`) / `G0` (`BtnA`) / EdgeTX `ARM` (`CH5` or `Btn1`) | Arm & Start / Restart Run |
+| `Del` / `` ` `` | Abort Run / Back |
 | `C` | Zero / Calibrate BMI270 IMU to current holding angle |
 | `B` | Toggle BLE Scan / Disconnect BLE Radio |
-| `M` / `Tab` | Open Settings Menu |
+| `M` / `Tab` | Open Settings Menu (Title & Post-Flight; disabled mid-flight) |
 | `K` | Open Live 8-Channel Input Monitor |
 
 ### IMU + Keyboard Flight (when no USB/BLE radio is connected)
 | Input | Action |
 |---|---|
 | **Tilt Left / Right** (or `A`/`D`, `,`/`/`) | Roll (move left / right + camera bank) |
-| **Tilt Up / Down** (or `W`/`S`, `;`/`.`) | Climb / Dive altitude (or Speed in `TILT UP/DN = SPEED` mode) |
+| **Tilt Up / Down** (or `W`/`S`, `;`/`.`) | Climb / Dive altitude (or Speed in `TILT UP/DOWN = SPEED` mode) |
 | **`Space`** | Speed Boost (faster forward) |
-| **`Shift`** | Brake (slow down) |
+| **`Aa` (`Shift`)** | Brake (slow down) |
 
 ## Connecting an EdgeTX / ExpressLRS Radio
 
@@ -50,7 +50,7 @@
 1. Power on the Cardputer-Adv via its side power switch.
 2. Connect your EdgeTX radio to the Cardputer-Adv USB-C port using a **USB-C OTG cable** (or a **powered USB-C OTG hub / Y-splitter** if your EdgeTX radio requires 5 V on VBUS to display the USB mode prompt — the Stamp-S3A does not include an internal 5 V VBUS boost converter).
 3. Select **USB Joystick (HID)** on your EdgeTX radio. The OSD automatically switches to `USB:99`.
-4. Choose your transmitter channel order (`AETR`, `TAER`, or `AERT`) in **`[M] SETTINGS → RADIO MAP`**.
+4. Choose your transmitter channel order (`AETR`, `TAER`, or `AERT`) in **`[M] SETTINGS → CHANNEL MAP`**.
 
 ## Pre-Built Firmware (`dist/`)
 

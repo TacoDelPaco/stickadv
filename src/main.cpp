@@ -113,15 +113,15 @@ void cycleSettingItem(int idx, int delta) {
                 (static_cast<int>(g_settings.gameMode) + delta + static_cast<int>(GameMode::COUNT)) %
                 static_cast<int>(GameMode::COUNT));
             break;
-        case 2: // TILT CTRL
+        case 2: // TILT FLY
             g_settings.imuEnabled = !g_settings.imuEnabled;
             break;
-        case 3: // TILT UP/DN
+        case 3: // TILT UP/DOWN
             g_settings.imuMode = static_cast<ImuMode>(
                 (static_cast<int>(g_settings.imuMode) + delta + static_cast<int>(ImuMode::COUNT)) %
                 static_cast<int>(ImuMode::COUNT));
             break;
-        case 4: // INVERT Y
+        case 4: // INVERT TILT
             g_settings.imuInvertY = !g_settings.imuInvertY;
             break;
         case 5: // SENSITIVITY
@@ -129,18 +129,18 @@ void cycleSettingItem(int idx, int delta) {
                 (static_cast<int>(g_settings.rates) + delta + static_cast<int>(RateProfile::COUNT)) %
                 static_cast<int>(RateProfile::COUNT));
             break;
-        case 6: // CAM ROLL
+        case 6: // CAMERA TILT
             g_settings.camTilt = !g_settings.camTilt;
             break;
         case 7: // CRT EFFECT
             g_settings.analogFx = !g_settings.analogFx;
             break;
-        case 8: // BATTERY
+        case 8: // OSD BATTERY
             g_settings.osdBattery = static_cast<OsdBatterySource>(
                 (static_cast<int>(g_settings.osdBattery) + delta + static_cast<int>(OsdBatterySource::COUNT)) %
                 static_cast<int>(OsdBatterySource::COUNT));
             break;
-        case 9: // RADIO MAP
+        case 9: // CHANNEL MAP
             g_settings.channelMap = static_cast<ChannelMap>(
                 (static_cast<int>(g_settings.channelMap) + delta + static_cast<int>(ChannelMap::COUNT)) %
                 static_cast<int>(ChannelMap::COUNT));
@@ -154,9 +154,9 @@ void cycleSettingItem(int idx, int delta) {
                 g_inputMgr.startBleScan();
             }
             return;
-        case 11: // FORGET BLE
+        case 11: // BLE PAIRING
             g_inputMgr.clearBleBonds();
-            g_sim.notifyToast("BLE CLEARED", 1.2f);
+            g_sim.notifyToast("BLE UNPAIRED", 1.2f);
             return;
         default:
             return;
@@ -251,12 +251,10 @@ void handleDiscreteKeys() {
             g_sim.abortToTitle();
         }
     } else {
-        // COUNTDOWN or FLYING
+        // COUNTDOWN or FLYING — 'M' is intentionally disabled mid-flight because it sits
+        // right next to the Left Arrow (',') key on the Cardputer-Adv keyboard.
         if (hitEsc) {
             g_sim.abortToTitle();
-        } else if (hitM) {
-            g_sim.abortToTitle();
-            g_screen = AppScreen::SETTINGS;
         }
     }
 }

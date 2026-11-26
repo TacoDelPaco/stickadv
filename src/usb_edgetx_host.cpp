@@ -215,7 +215,7 @@ static void closeActiveDevice() {
     g_usb.latestState.valid = false;
     g_usb.devLabel[0] = '\0';
     portEXIT_CRITICAL(&g_usb.lock);
-    setUsbStatus("WAIT (5V OTG)");
+    setUsbStatus("WAITING");
 }
 
 static void openAttachedDevice(uint8_t devAddr) {
@@ -224,11 +224,11 @@ static void openAttachedDevice(uint8_t devAddr) {
     }
 
     char msg[28];
-    setUsbStatus("USB:OPENING");
+    setUsbStatus("OPENING...");
 
     usb_device_handle_t hdl = nullptr;
     if (usb_host_device_open(g_usb.clientHdl, devAddr, &hdl) != ESP_OK || !hdl) {
-        setUsbStatus("ERR:OPEN");
+        setUsbStatus("OPEN ERR");
         return;
     }
 
@@ -236,7 +236,7 @@ static void openAttachedDevice(uint8_t devAddr) {
     const usb_config_desc_t* cfgDesc = nullptr;
     if (usb_host_get_device_descriptor(hdl, &devDesc) != ESP_OK ||
         usb_host_get_active_config_descriptor(hdl, &cfgDesc) != ESP_OK) {
-        setUsbStatus("ERR:DESC");
+        setUsbStatus("DESC ERR");
         usb_host_device_close(g_usb.clientHdl, hdl);
         return;
     }
@@ -253,7 +253,7 @@ static void openAttachedDevice(uint8_t devAddr) {
     }
 
     if (usb_host_interface_claim(g_usb.clientHdl, hdl, iface, 0) != ESP_OK) {
-        setUsbStatus("ERR:CLAIM");
+        setUsbStatus("CLAIM ERR");
         usb_host_device_close(g_usb.clientHdl, hdl);
         return;
     }
@@ -297,12 +297,12 @@ static void openAttachedDevice(uint8_t devAddr) {
     g_usb.intXfer->num_bytes        = g_usb.epInMps;
 
     if (usb_host_transfer_submit(g_usb.intXfer) != ESP_OK) {
-        setUsbStatus("ERR:XFER");
+        setUsbStatus("XFER ERR");
         closeActiveDevice();
         return;
     }
 
-    snprintf(msg, sizeof(msg), "OK:%04X:%04X", g_usb.vid, g_usb.pid);
+    snprintf(msg, sizeof(msg), "OK %04X:%04X", g_usb.vid, g_usb.pid);
     setUsbStatus(msg);
 }
 
@@ -378,7 +378,7 @@ bool UsbEdgeTxHost::begin() {
     }
     g_usb.ctrlDoneSem = xSemaphoreCreateBinary();
 
-    setUsbStatus("WAIT (5V OTG)");
+    setUsbStatus("WAITING");
     xTaskCreatePinnedToCore(usbHostDaemonTask, "usb_daemon", 3072, nullptr, 5, nullptr, 0);
     xTaskCreatePinnedToCore(usbHostClientTask, "usb_client", 4096, nullptr, 5, nullptr, 0);
     return true;

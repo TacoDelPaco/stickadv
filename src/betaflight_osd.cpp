@@ -129,12 +129,12 @@ static const uint8_t kIconBattery[6][7] = {
     {0b0011100, 0b1111111, 0b1111111, 0b1111111, 0b1111111, 0b1111111, 0b1111111},
 };
 
-const char* inputSourceLabel(InputSource src, bool isElrs) {
+const char* inputSourceLabel(InputSource src, bool isElrs, bool imuEnabled = true) {
     switch (src) {
         case InputSource::USB_HID: return "USB";
         case InputSource::BLE_HID: return isElrs ? "ELRS" : "BLE";
         case InputSource::IMU_KB:
-        default:                   return "IMU";
+        default:                   return imuEnabled ? "IMU" : "KEY";
     }
 }
 
@@ -152,7 +152,7 @@ const char* rateLabel(RateProfile r) {
         case RateProfile::RATE_LOW:  return "LOW";
         case RateProfile::RATE_HIGH: return "HIGH";
         case RateProfile::RATE_MID:
-        default:                     return "MID";
+        default:                     return "MED";
     }
 }
 
@@ -378,7 +378,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     // ---- Top-Left: Link Quality & Source + Gate Score ----
     uint16_t lqCol = (t.rssiPct < 45) ? OSD_RED : ((t.rssiPct < 70) ? OSD_AMBER : OSD_WHITE);
     drawIconOutlined(fb, 4, 4, OsdIcon::ANTENNA, lqCol);
-    snprintf(buf, sizeof(buf), "%s:%02d", inputSourceLabel(input.source, input.isElrsBle), t.rssiPct);
+    snprintf(buf, sizeof(buf), "%s:%02d", inputSourceLabel(input.source, input.isElrsBle, settings.imuEnabled), t.rssiPct);
     drawTextOutlined(fb, 13, 4, buf, lqCol);
 
     drawIconOutlined(fb, 4, 15, OsdIcon::GATE, OSD_GREEN);
@@ -490,9 +490,9 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
         snprintf(buf, sizeof(buf), "BLE: %s", ui.bleStatus);
         srcCol = strstr(ui.bleStatus, "ERR") || strstr(ui.bleStatus, "DISC") ? OSD_RED : OSD_CYAN;
     } else if (settings.imuEnabled && ui.imuPresent) {
-        snprintf(buf, sizeof(buf), "CTRL: TILT + KEYS");
+        snprintf(buf, sizeof(buf), "INPUT: TILT + KEYS");
     } else {
-        snprintf(buf, sizeof(buf), "CTRL: KEYS ONLY");
+        snprintf(buf, sizeof(buf), "INPUT: KEYS ONLY");
     }
     drawTextCentered(fb, SCREEN_W / 2, 39, buf, srcCol, 1);
 
@@ -508,7 +508,7 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
     } else {
         bool pulse = ((frameCount / 22) & 1) != 0;
         fillRectAlpha(fb, 40, 66, SCREEN_W - 80, 13, OSD_GREEN, pulse ? 55 : 28);
-        drawTextCentered(fb, SCREEN_W / 2, 69, "PRESS [ENTER] TO FLY",
+        drawTextCentered(fb, SCREEN_W / 2, 69, "PRESS [OK] TO FLY",
                          pulse ? OSD_GREEN : OSD_WHITE, 1);
     }
 
@@ -518,10 +518,10 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
     }
 
     // Clean 2x2 plain-English shortcut grid
-    drawTextOutlined(fb, 28,  94, "[M] SETTINGS",  OSD_WHITE);
-    drawTextOutlined(fb, 130, 94, "[B] BLE RADIO", OSD_WHITE);
-    drawTextOutlined(fb, 28, 108, "[C] CENTER",    OSD_DIM);
-    drawTextOutlined(fb, 130, 108, "[K] INPUTS",   OSD_DIM);
+    drawTextOutlined(fb, 24,  94, "[M] SETTINGS",  OSD_WHITE);
+    drawTextOutlined(fb, 128, 94, "[B] BLE RADIO", OSD_WHITE);
+    drawTextOutlined(fb, 24, 108, "[C] ZERO TILT", OSD_DIM);
+    drawTextOutlined(fb, 128, 108, "[K] INPUTS",   OSD_DIM);
 }
 
 void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
@@ -557,7 +557,7 @@ void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
     drawTextOutlined(fb, 26, 64, buf, OSD_WHITE);
 
     if (input.source == InputSource::IMU_KB) {
-        snprintf(buf, sizeof(buf), "INPUT   : %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS");
+        snprintf(buf, sizeof(buf), "INPUT   : %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS ONLY");
     } else {
         snprintf(buf, sizeof(buf), "INPUT   : %s (%s)",
                  inputSourceLabel(input.source, input.isElrsBle),
@@ -568,7 +568,7 @@ void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
     snprintf(buf, sizeof(buf), "BATTERY : %d MAH", static_cast<int>(sim.telemetry().mahUsed + 0.5f));
     drawTextOutlined(fb, 26, 88, buf, OSD_DIM);
 
-    drawTextCentered(fb, SCREEN_W / 2, 108, "[ENTER] FLY AGAIN  [M] MENU", OSD_GREEN, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 108, "[OK] FLY AGAIN  [M] SETTINGS", OSD_GREEN, 1);
 }
 
 void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
@@ -585,16 +585,16 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     const char* labels[TOTAL_ITEMS] = {
         "VOLUME",
         "GAME MODE",
-        "TILT CTRL",
-        "TILT UP/DN",
-        "INVERT Y",
+        "TILT FLY",
+        "TILT UP/DOWN",
+        "INVERT TILT",
         "SENSITIVITY",
-        "CAM ROLL",
+        "CAMERA TILT",
         "CRT EFFECT",
-        "BATTERY",
-        "RADIO MAP",
+        "OSD BATTERY",
+        "CHANNEL MAP",
         "BLE RADIO",
-        "FORGET BLE",
+        "BLE PAIRING",
     };
 
     char vals[TOTAL_ITEMS][20];
@@ -604,14 +604,12 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     snprintf(vals[2], sizeof(vals[2]), "%s", settings.imuEnabled ? "ON" : "OFF");
     snprintf(vals[3], sizeof(vals[3]), "%s", settings.imuMode == ImuMode::TILT_ALT ? "ALTITUDE" : "SPEED");
     snprintf(vals[4], sizeof(vals[4]), "%s", settings.imuInvertY ? "ON" : "OFF");
-    snprintf(vals[5], sizeof(vals[5]), "%s",
-             settings.rates == RateProfile::RATE_LOW  ? "LOW" :
-             settings.rates == RateProfile::RATE_HIGH ? "HIGH" : "MED");
+    snprintf(vals[5], sizeof(vals[5]), "%s", rateLabel(settings.rates));
     snprintf(vals[6], sizeof(vals[6]), "%s", settings.camTilt ? "ON" : "OFF");
     snprintf(vals[7], sizeof(vals[7]), "%s", settings.analogFx ? "ON" : "OFF");
     snprintf(vals[8], sizeof(vals[8]), "%s", settings.osdBattery == OsdBatterySource::SIM_4S ? "SIM 4S" : "DEVICE");
     snprintf(vals[9], sizeof(vals[9]), "%s", chMapLabel(settings.channelMap));
-    if (ui.bleConnected)      snprintf(vals[10], sizeof(vals[10]), "UNLINK");
+    if (ui.bleConnected)      snprintf(vals[10], sizeof(vals[10]), "DISCONNECT");
     else if (ui.bleScanning)  snprintf(vals[10], sizeof(vals[10]), "SCANNING");
     else                      snprintf(vals[10], sizeof(vals[10]), "SCAN");
     snprintf(vals[11], sizeof(vals[11]), "CLEAR");
@@ -642,7 +640,7 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     int thumbY = trackY + ((trackH - thumbH) * topIdx) / (TOTAL_ITEMS - VISIBLE);
     fillRectAlpha(fb, trackX, thumbY, 3, thumbH, OSD_CYAN, 210);
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "UP/DN:MOVE  ENTER:SET  ESC:BACK", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "ARROWS:MOVE  OK:SET  DEL:BACK", OSD_DIM, 1);
 }
 
 void BetaflightOsd::drawStickMonitor(uint16_t* fb,
@@ -654,7 +652,7 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
 
     char buf[64];
     if (input.source == InputSource::IMU_KB) {
-        snprintf(buf, sizeof(buf), "INPUTS - %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS");
+        snprintf(buf, sizeof(buf), "INPUTS - %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS ONLY");
     } else {
         snprintf(buf, sizeof(buf), "INPUTS - %s (%s)",
                  inputSourceLabel(input.source, input.isElrsBle),
@@ -663,13 +661,13 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
     drawTextCentered(fb, SCREEN_W / 2, 8, buf, OSD_AMBER, 1);
 
     // Left column: Mapped flight axes
-    const char* axisName[4] = {"ROLL", "PTCH", "THR", "YAW"};
+    const char* axisName[4] = {"ROLL", "PITCH", "THR", "YAW"};
     const float axisVal[4]  = {input.roll, input.pitch, input.throttle, input.yaw};
 
     for (int i = 0; i < 4; ++i) {
         int y = 21 + i * 13;
         drawTextOutlined(fb, 10, y, axisName[i], OSD_WHITE);
-        int bx = 38, bw = 78, bh = 8;
+        int bx = 44, bw = 72, bh = 8;
         drawRect(fb, bx, y, bw, bh, OSD_DIM);
         int mid = bx + bw / 2;
         putPixel(fb, mid, y + 1, OSD_WHITE);
@@ -704,5 +702,5 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
     snprintf(buf, sizeof(buf), "BLE: %s (%lu)", ui.bleStatus, static_cast<unsigned long>(ui.blePkts));
     drawTextOutlined(fb, 10, 100, buf, ui.bleConnected ? OSD_GREEN : OSD_CYAN);
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "[C]CENTER [B]BLE [X]RESET [ESC]", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "[C]ZERO [B]BLE [X]UNPAIR [DEL]BACK", OSD_DIM, 1);
 }
