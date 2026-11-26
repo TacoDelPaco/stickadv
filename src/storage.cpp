@@ -6,7 +6,7 @@
 namespace {
 static Preferences g_prefs;
 static bool        g_prefsReady = false;
-constexpr const char* NS_NAME = "fpv_sim";
+constexpr const char* NS_NAME = "stickadv";
 } // namespace
 
 void SimStorage::begin() {

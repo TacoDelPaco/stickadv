@@ -446,7 +446,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
         fmode = settings.imuEnabled ? "IMU" : "KEYS";
     }
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 21, fmode, OSD_CYAN);
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 11, "EDGETX-SIM", OSD_WHITE);
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 11, "STICKADV", OSD_WHITE);
 
     // ---- Bottom-Right: Throttle % & Rate Profile ----
     snprintf(buf, sizeof(buf), "THR:%d%%", t.throttlePct);
@@ -467,12 +467,16 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
     char buf[44];
 
     // Translucent dark Betaflight goggle overlay panel
-    fillRectAlpha(fb, 10, 6, SCREEN_W - 20, SCREEN_H - 12, OSD_PANEL, 175);
-    drawRect(fb, 10, 6, SCREEN_W - 20, SCREEN_H - 12, OSD_CYAN);
+    fillRectAlpha(fb, 10, 5, SCREEN_W - 20, SCREEN_H - 10, OSD_PANEL, 180);
+    drawRect(fb, 10, 5, SCREEN_W - 20, SCREEN_H - 10, OSD_CYAN);
 
-    // Header
-    drawTextCentered(fb, SCREEN_W / 2, 11, "EDGETX FPV SIM", OSD_AMBER, 2);
-    drawTextCentered(fb, SCREEN_W / 2, 28, "CARDPUTER-ADV  BF-OSD", OSD_CYAN, 1);
+    // Two-tone StickADV hero title matching the cover artwork ("STICK" cyan + "ADV" amber)
+    constexpr int kTitleScale = 3;
+    constexpr int kTitleW     = 8 * 6 * kTitleScale - kTitleScale; // "STICKADV" = 141 px
+    constexpr int kTitleX     = (SCREEN_W - kTitleW) / 2;
+    drawTextOutlined(fb, kTitleX, 10, "STICK", OSD_CYAN, kTitleScale);
+    drawTextOutlined(fb, kTitleX + 5 * 6 * kTitleScale, 10, "ADV", OSD_AMBER, kTitleScale);
+    drawTextCentered(fb, SCREEN_W / 2, 35, "FPV SIMULATOR  BF-OSD", OSD_DIM, 1);
 
     // Input Source & Live BLE/USB Status
     uint16_t srcCol = (input.source == InputSource::USB_HID) ? OSD_GREEN :
@@ -492,27 +496,27 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
     } else {
         snprintf(buf, sizeof(buf), "TX: ARROW KEYS    VOL:%d%%", settings.volumePct);
     }
-    drawTextCentered(fb, SCREEN_W / 2, 42, buf, srcCol, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 48, buf, srcCol, 1);
 
     // Mode & Best Score
     snprintf(buf, sizeof(buf), "MODE:%s  BEST:%d",
              settings.gameMode == GameMode::RACE_30S ? "30S" : "FREE",
              sim.getBestScore());
-    drawTextCentered(fb, SCREEN_W / 2, 55, buf, OSD_WHITE, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 60, buf, OSD_WHITE, 1);
 
     // Live Toast Banner (e.g., VOL: 20%, IMU ZEROED) or Blinking ARM Prompt
     if (sim.statusBannerTimer() > 0.0f && sim.statusBanner()[0] != '\0') {
-        drawTextCentered(fb, SCREEN_W / 2, 71, sim.statusBanner(), OSD_CYAN, 1);
+        drawTextCentered(fb, SCREEN_W / 2, 74, sim.statusBanner(), OSD_CYAN, 1);
     } else if ((frameCount / 22) & 1) {
-        drawTextCentered(fb, SCREEN_W / 2, 71, "PRESS [ENTER] TO ARM", OSD_GREEN, 1);
+        drawTextCentered(fb, SCREEN_W / 2, 74, "PRESS [ENTER] TO ARM", OSD_GREEN, 1);
     } else {
-        drawTextCentered(fb, SCREEN_W / 2, 71, "   DISARMED - READY   ", OSD_WHITE, 1);
+        drawTextCentered(fb, SCREEN_W / 2, 74, "   DISARMED - READY   ", OSD_WHITE, 1);
     }
 
     // Simple Controls Legend
-    drawTextCentered(fb, SCREEN_W / 2, 88,  "ARROWS:FLY  SPC:BOOST  -/=:VOL", OSD_WHITE, 1);
-    drawTextCentered(fb, SCREEN_W / 2, 100, "[M]SETUP [B]BLE [K]DIAG [I]IMU", OSD_DIM, 1);
-    drawTextCentered(fb, SCREEN_W / 2, 112, "[C]ZERO IMU  [G0]ARM", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 89,  "ARROWS:FLY  SPC:BOOST  -/=:VOL", OSD_WHITE, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 101, "[M]SETUP [B]BLE [K]DIAG [I]IMU", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 113, "[C]ZERO IMU  [G0]ARM", OSD_DIM, 1);
 }
 
 void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
@@ -626,7 +630,7 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
     fillRectAlpha(fb, 0, 0, SCREEN_W, SCREEN_H, OSD_PANEL, 235);
     drawRect(fb, 4, 4, SCREEN_W - 8, SCREEN_H - 8, OSD_GREEN);
 
-    char buf[44];
+    char buf[64];
     snprintf(buf, sizeof(buf), "INPUT DIAG - %s (%s)",
              inputSourceLabel(input.source, input.isElrsBle),
              chMapLabel(settings.channelMap));

@@ -5,4 +5,5 @@
 *.bin
 *.ppm
 *.png
+!assets/*.png
 .DS_Store

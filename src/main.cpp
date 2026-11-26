@@ -1,5 +1,5 @@
 // ============================================================================
-// Cardputer-Adv FPV Simulator — Port of EdgeTX Game-Simulator (AlexeyStn)
+// StickADV — 3D FPV Racing Simulator (Port of EdgeTX Game-Simulator)
 // Target: M5Stack Cardputer-Adv (ESP32-S3FN8, 240x135 ST7789V2, BMI270, ES8311)
 //
 // Features:

@@ -334,7 +334,7 @@ static void bleConnectTask(void* arg) {
 bool BleHidHost::begin() {
     if (g_ble.initialized) return true;
 
-    NimBLEDevice::init("CardputerFPV");
+    NimBLEDevice::init("StickADV");
     NimBLEDevice::setPower(ESP_PWR_LVL_P9);
     // Bonding=true, MITM=false, SC=true ("Just Works" HID-over-GATT)
     NimBLEDevice::setSecurityAuth(true, false, true);
