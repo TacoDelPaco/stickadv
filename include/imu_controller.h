@@ -34,7 +34,12 @@ public:
 
     bool  isPresent() const { return _imuPresent; }
     float rollDeg() const   { return -(_rollDeg - _zeroRollDeg); }
-    float pitchDeg() const  { return  (_pitchDeg - _zeroPitchDeg); }
+    float pitchDeg() const  { return -(_pitchDeg - _zeroPitchDeg); }
+
+    // Map raw BMI270 Euler deltas into normalized [-1..+1] pilot roll & tilt
+    static void computeTiltAxes(float rawRollDeg, float rawPitchDeg,
+                                float zeroRollDeg, float zeroPitchDeg,
+                                bool invertY, float& outRoll, float& outTilt);
 
 private:
     bool  _imuPresent    = false;
@@ -42,4 +47,6 @@ private:
     float _pitchDeg      = 0.0f;
     float _zeroRollDeg   = 0.0f;
     float _zeroPitchDeg  = 0.0f;
+    float _kbRoll        = 0.0f;
+    float _kbVert        = 0.0f;
 };

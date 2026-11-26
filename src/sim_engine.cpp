@@ -161,7 +161,7 @@ void SimEngine::abortToTitle() {
 }
 
 void SimEngine::notifyImuZeroed() {
-    setBanner("IMU ZEROED", 1.2f);
+    setBanner("TILT CENTERED", 1.2f);
     pushAudio(AudioEvent::IMU_CAL);
 }
 

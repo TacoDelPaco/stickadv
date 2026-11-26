@@ -10,6 +10,7 @@
 
 #include "config.h"
 #include "hid_parser.h"
+#include "imu_controller.h"
 #include "sim_engine.h"
 #include "renderer.h"
 #include "betaflight_osd.h"
@@ -192,7 +193,7 @@ static void testRendererAndOsdVisuals() {
     BetaflightOsd::drawFlightOsd(fb, sim, in, settings, 42);
     writePpm("/tmp/stickadv_flight.ppm", fb);
 
-    // Also render title overlay & post-flight stats to verify zero out-of-bounds crashes
+    // Also render title overlay, settings menu, stick monitor & post-flight stats
     UiMenuState ui;
     ui.usbConnected = false;
     ui.bleConnected = true;
@@ -204,12 +205,68 @@ static void testRendererAndOsdVisuals() {
     BetaflightOsd::drawTitleOverlay(fb, sim, in, settings, ui, 10);
     writePpm("/tmp/stickadv_title.ppm", fb);
 
+    for (int sel = 0; sel < 12; ++sel) {
+        ui.selectedItem = sel;
+        BetaflightOsd::drawSettingsMenu(fb, settings, ui);
+    }
+    BetaflightOsd::drawStickMonitor(fb, in, settings, ui);
+    BetaflightOsd::drawPostFlightStats(fb, sim, in, settings, 10);
+
     printf("[PASS] 3D Renderer + Betaflight Analog OSD rendered cleanly to /tmp/stickadv_*.ppm\n");
+}
+
+static void testImuAndKeyboardControls() {
+    // 1. Verify IMU pitch axis is flipped relative to raw sensor pitch (and roll remains negated)
+    float roll = 0.0f, tilt = 0.0f;
+    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, false, roll, tilt);
+    assert(roll < -0.35f);
+    assert(tilt < -0.35f);
+
+    // Verify invertY flips tilt back to positive while leaving roll untouched
+    float rollInv = 0.0f, tiltInv = 0.0f;
+    ImuController::computeTiltAxes(11.0f, 9.0f, 0.0f, 0.0f, true, rollInv, tiltInv);
+    assert(nearf(rollInv, roll, 0.001f));
+    assert(nearf(tiltInv, -tilt, 0.001f));
+
+    // 2. Verify lowered keyboard sensitivity, smooth micro-tap ramp, and crisp stop
+    ImuController ctrl;
+    SimSettings settings;
+    settings.imuEnabled = false;
+    PilotInput in;
+    KeyFlightState keys;
+
+    // Short 100ms tap (6 frames at 60 FPS) should stay gentle for micro-adjustments
+    keys.right = true;
+    keys.up    = true;
+    for (int i = 0; i < 6; ++i) {
+        ctrl.update(1.0f / 60.0f, keys, settings, in);
+    }
+    assert(in.roll > 0.05f && in.roll < 0.25f);
+    assert(in.throttle > 0.05f && in.throttle < 0.20f);
+
+    // Sustained 1s hold should plateau at gentle, playable caps (well below old 0.90)
+    for (int i = 0; i < 60; ++i) {
+        ctrl.update(1.0f / 60.0f, keys, settings, in);
+    }
+    assert(in.roll > 0.35f && in.roll <= 0.45f);
+    assert(in.throttle > 0.20f && in.throttle <= 0.30f);
+
+    // Release should return cleanly to zero within ~50ms (3-4 frames)
+    keys.right = false;
+    keys.up    = false;
+    for (int i = 0; i < 4; ++i) {
+        ctrl.update(1.0f / 60.0f, keys, settings, in);
+    }
+    assert(nearf(in.roll, 0.0f, 0.001f));
+    assert(nearf(in.throttle, 0.0f, 0.001f));
+
+    printf("[PASS] Flipped IMU up/down axis & lowered smooth keyboard sensitivity\n");
 }
 
 int main() {
     testEdgeTxHid();
     testElrsBleHid();
+    testImuAndKeyboardControls();
     testSimPhysicsAndScoring();
     testRendererAndOsdVisuals();
     printf("ALL TESTS PASSED!\n");

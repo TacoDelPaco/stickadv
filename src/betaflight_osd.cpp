@@ -419,7 +419,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
         uint16_t bCol = OSD_WHITE;
         if (strstr(sim.statusBanner(), "+1")) bCol = OSD_GREEN;
         else if (strstr(sim.statusBanner(), "-1")) bCol = OSD_RED;
-        else if (strstr(sim.statusBanner(), "ZERO")) bCol = OSD_CYAN;
+        else if (strstr(sim.statusBanner(), "ZERO") || strstr(sim.statusBanner(), "CENTER")) bCol = OSD_CYAN;
         drawTextCentered(fb, SCREEN_W / 2, 26, sim.statusBanner(), bCol, 1);
     } else if (t.lowBattery && ((frameCount / 15) & 1)) {
         drawTextCentered(fb, SCREEN_W / 2, 26, "LOW BATTERY", OSD_RED, 1);
@@ -443,7 +443,7 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     // ---- Bottom-Center: Betaflight Craft Name & Flight Mode ----
     const char* fmode = "ACRO";
     if (input.source == InputSource::IMU_KB) {
-        fmode = settings.imuEnabled ? "IMU" : "KEYS";
+        fmode = settings.imuEnabled ? "TILT" : "KEYS";
     }
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 21, fmode, OSD_CYAN);
     drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 11, "STICKADV", OSD_WHITE);
@@ -466,57 +466,62 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
                                      uint32_t frameCount) {
     char buf[44];
 
-    // Translucent dark Betaflight goggle overlay panel
-    fillRectAlpha(fb, 10, 5, SCREEN_W - 20, SCREEN_H - 10, OSD_PANEL, 180);
+    // Translucent dark overlay panel
+    fillRectAlpha(fb, 10, 5, SCREEN_W - 20, SCREEN_H - 10, OSD_PANEL, 196);
     drawRect(fb, 10, 5, SCREEN_W - 20, SCREEN_H - 10, OSD_CYAN);
 
-    // Two-tone StickADV hero title matching the cover artwork ("STICK" cyan + "ADV" amber)
+    // Two-tone StickADV hero title ("STICK" cyan + "ADV" amber)
     constexpr int kTitleScale = 3;
     constexpr int kTitleW     = 8 * 6 * kTitleScale - kTitleScale; // "STICKADV" = 141 px
     constexpr int kTitleX     = (SCREEN_W - kTitleW) / 2;
-    drawTextOutlined(fb, kTitleX, 10, "STICK", OSD_CYAN, kTitleScale);
-    drawTextOutlined(fb, kTitleX + 5 * 6 * kTitleScale, 10, "ADV", OSD_AMBER, kTitleScale);
-    drawTextCentered(fb, SCREEN_W / 2, 35, "FPV SIMULATOR  BF-OSD", OSD_DIM, 1);
+    drawTextOutlined(fb, kTitleX, 11, "STICK", OSD_CYAN, kTitleScale);
+    drawTextOutlined(fb, kTitleX + 5 * 6 * kTitleScale, 11, "ADV", OSD_AMBER, kTitleScale);
 
-    // Input Source & Live BLE/USB Status
+    // Clean, single-line active controller status
     uint16_t srcCol = (input.source == InputSource::USB_HID) ? OSD_GREEN :
                       (input.source == InputSource::BLE_HID) ? OSD_CYAN  : OSD_AMBER;
 
     if (input.source == InputSource::USB_HID) {
-        snprintf(buf, sizeof(buf), "TX: USB %s (%s)",
-                 ui.usbDevName[0] ? ui.usbDevName : "HID", chMapLabel(settings.channelMap));
+        snprintf(buf, sizeof(buf), "USB: %s", ui.usbDevName[0] ? ui.usbDevName : "RADIO");
     } else if (input.source == InputSource::BLE_HID) {
-        snprintf(buf, sizeof(buf), "TX: BLE %s", ui.blePeerName[0] ? ui.blePeerName : "HID");
+        snprintf(buf, sizeof(buf), "BLE: %s", ui.blePeerName[0] ? ui.blePeerName : "RADIO");
     } else if (ui.bleScanning || (ui.bleStatus[0] && strcmp(ui.bleStatus, "READY") != 0 &&
                                   strcmp(ui.bleStatus, "IDLE") != 0)) {
         snprintf(buf, sizeof(buf), "BLE: %s", ui.bleStatus);
         srcCol = strstr(ui.bleStatus, "ERR") || strstr(ui.bleStatus, "DISC") ? OSD_RED : OSD_CYAN;
     } else if (settings.imuEnabled && ui.imuPresent) {
-        snprintf(buf, sizeof(buf), "TX: IMU + ARROWS  VOL:%d%%", settings.volumePct);
+        snprintf(buf, sizeof(buf), "CTRL: TILT + KEYS");
     } else {
-        snprintf(buf, sizeof(buf), "TX: ARROW KEYS    VOL:%d%%", settings.volumePct);
+        snprintf(buf, sizeof(buf), "CTRL: KEYS ONLY");
     }
-    drawTextCentered(fb, SCREEN_W / 2, 48, buf, srcCol, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 39, buf, srcCol, 1);
 
-    // Mode & Best Score
-    snprintf(buf, sizeof(buf), "MODE:%s  BEST:%d",
-             settings.gameMode == GameMode::RACE_30S ? "30S" : "FREE",
+    // Race Mode & Best Score
+    snprintf(buf, sizeof(buf), "%s   BEST: %d",
+             settings.gameMode == GameMode::RACE_30S ? "30S RACE" : "ENDLESS",
              sim.getBestScore());
-    drawTextCentered(fb, SCREEN_W / 2, 60, buf, OSD_WHITE, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 52, buf, OSD_WHITE, 1);
 
-    // Live Toast Banner (e.g., VOL: 20%, IMU ZEROED) or Blinking ARM Prompt
+    // Primary Call-to-Action or live feedback toast
     if (sim.statusBannerTimer() > 0.0f && sim.statusBanner()[0] != '\0') {
-        drawTextCentered(fb, SCREEN_W / 2, 74, sim.statusBanner(), OSD_CYAN, 1);
-    } else if ((frameCount / 22) & 1) {
-        drawTextCentered(fb, SCREEN_W / 2, 74, "PRESS [ENTER] TO ARM", OSD_GREEN, 1);
+        drawTextCentered(fb, SCREEN_W / 2, 69, sim.statusBanner(), OSD_CYAN, 1);
     } else {
-        drawTextCentered(fb, SCREEN_W / 2, 74, "   DISARMED - READY   ", OSD_WHITE, 1);
+        bool pulse = ((frameCount / 22) & 1) != 0;
+        fillRectAlpha(fb, 40, 66, SCREEN_W - 80, 13, OSD_GREEN, pulse ? 55 : 28);
+        drawTextCentered(fb, SCREEN_W / 2, 69, "PRESS [ENTER] TO FLY",
+                         pulse ? OSD_GREEN : OSD_WHITE, 1);
     }
 
-    // Simple Controls Legend
-    drawTextCentered(fb, SCREEN_W / 2, 89,  "ARROWS:FLY  SPC:BOOST  -/=:VOL", OSD_WHITE, 1);
-    drawTextCentered(fb, SCREEN_W / 2, 101, "[M]SETUP [B]BLE [K]DIAG [I]IMU", OSD_DIM, 1);
-    drawTextCentered(fb, SCREEN_W / 2, 113, "[C]ZERO IMU  [G0]ARM", OSD_DIM, 1);
+    // Subtle divider between main info and menu shortcuts
+    for (int px = 22; px < SCREEN_W - 22; ++px) {
+        putPixel(fb, px, 86, blend565(fb[86 * SCREEN_W + px], OSD_CYAN, 90));
+    }
+
+    // Clean 2x2 plain-English shortcut grid
+    drawTextOutlined(fb, 28,  94, "[M] SETTINGS",  OSD_WHITE);
+    drawTextOutlined(fb, 130, 94, "[B] BLE RADIO", OSD_WHITE);
+    drawTextOutlined(fb, 28, 108, "[C] CENTER",    OSD_DIM);
+    drawTextOutlined(fb, 130, 108, "[K] INPUTS",   OSD_DIM);
 }
 
 void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
@@ -527,37 +532,41 @@ void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
     const RunStats& st = sim.stats();
     char buf[40];
 
-    fillRectAlpha(fb, 14, 8, SCREEN_W - 28, SCREEN_H - 16, OSD_PANEL, 200);
+    fillRectAlpha(fb, 14, 8, SCREEN_W - 28, SCREEN_H - 16, OSD_PANEL, 205);
     drawRect(fb, 14, 8, SCREEN_W - 28, SCREEN_H - 16, st.isNewBest ? OSD_GREEN : OSD_WHITE);
 
-    drawTextCentered(fb, SCREEN_W / 2, 13, "-- POST FLIGHT STATS --", OSD_AMBER, 1);
+    drawTextCentered(fb, SCREEN_W / 2, 13, "RACE COMPLETE", OSD_AMBER, 1);
 
     if (st.isNewBest && ((frameCount / 15) & 1)) {
-        drawTextCentered(fb, SCREEN_W / 2, 24, "* NEW BEST SCORE! *", OSD_GREEN, 1);
+        drawTextCentered(fb, SCREEN_W / 2, 25, "* NEW BEST SCORE! *", OSD_GREEN, 1);
     } else {
         snprintf(buf, sizeof(buf), "SCORE: %d   BEST: %d", st.score, st.bestScore);
-        drawTextCentered(fb, SCREEN_W / 2, 24, buf, OSD_WHITE, 1);
+        drawTextCentered(fb, SCREEN_W / 2, 25, buf, OSD_WHITE, 1);
     }
 
     int total = st.gatesHit + st.gatesMissed;
     int acc   = total > 0 ? (st.gatesHit * 100 / total) : 0;
 
-    snprintf(buf, sizeof(buf), "GATES HIT  : %d / %d (%d%%)", st.gatesHit, total, acc);
-    drawTextOutlined(fb, 24, 40, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "GATES   : %d / %d (%d%%)", st.gatesHit, total, acc);
+    drawTextOutlined(fb, 26, 40, buf, OSD_WHITE);
 
-    snprintf(buf, sizeof(buf), "MAX STREAK : %d", st.maxStreak);
-    drawTextOutlined(fb, 24, 52, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "STREAK  : %d", st.maxStreak);
+    drawTextOutlined(fb, 26, 52, buf, OSD_WHITE);
 
-    snprintf(buf, sizeof(buf), "MAX SPEED  : %d KM/H", static_cast<int>(st.maxSpeedKmh + 0.5f));
-    drawTextOutlined(fb, 24, 64, buf, OSD_WHITE);
+    snprintf(buf, sizeof(buf), "TOP SPD : %d KM/H", static_cast<int>(st.maxSpeedKmh + 0.5f));
+    drawTextOutlined(fb, 26, 64, buf, OSD_WHITE);
 
-    snprintf(buf, sizeof(buf), "LINK / MAP : %s / %s",
-             inputSourceLabel(input.source, input.isElrsBle),
-             chMapLabel(settings.channelMap));
-    drawTextOutlined(fb, 24, 76, buf, OSD_CYAN);
+    if (input.source == InputSource::IMU_KB) {
+        snprintf(buf, sizeof(buf), "INPUT   : %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS");
+    } else {
+        snprintf(buf, sizeof(buf), "INPUT   : %s (%s)",
+                 inputSourceLabel(input.source, input.isElrsBle),
+                 chMapLabel(settings.channelMap));
+    }
+    drawTextOutlined(fb, 26, 76, buf, OSD_CYAN);
 
-    snprintf(buf, sizeof(buf), "BATT USED  : %d MAH", static_cast<int>(sim.telemetry().mahUsed + 0.5f));
-    drawTextOutlined(fb, 24, 88, buf, OSD_DIM);
+    snprintf(buf, sizeof(buf), "BATTERY : %d MAH", static_cast<int>(sim.telemetry().mahUsed + 0.5f));
+    drawTextOutlined(fb, 26, 88, buf, OSD_DIM);
 
     drawTextCentered(fb, SCREEN_W / 2, 108, "[ENTER] FLY AGAIN  [M] MENU", OSD_GREEN, 1);
 }
@@ -568,39 +577,43 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     fillRectAlpha(fb, 0, 0, SCREEN_W, SCREEN_H, OSD_PANEL, 235);
     drawRect(fb, 4, 4, SCREEN_W - 8, SCREEN_H - 8, OSD_CYAN);
 
-    drawTextCentered(fb, SCREEN_W / 2, 9, "- BETAFLIGHT OSD CMS -", OSD_AMBER, 1);
-
     constexpr int TOTAL_ITEMS = 12;
+    char hdr[28];
+    snprintf(hdr, sizeof(hdr), "SETTINGS  %d/%d", ui.selectedItem + 1, TOTAL_ITEMS);
+    drawTextCentered(fb, SCREEN_W / 2, 9, hdr, OSD_AMBER, 1);
+
     const char* labels[TOTAL_ITEMS] = {
         "VOLUME",
-        "RACE MODE",
-        "IMU TILT",
-        "IMU MODE",
-        "IMU INV Y",
-        "CH MAPPING",
-        "RC RATES",
-        "CAM TILT",
-        "ANALOG FX",
-        "OSD BATT",
+        "GAME MODE",
+        "TILT CTRL",
+        "TILT UP/DN",
+        "INVERT Y",
+        "SENSITIVITY",
+        "CAM ROLL",
+        "CRT EFFECT",
+        "BATTERY",
+        "RADIO MAP",
         "BLE RADIO",
-        "BLE BONDS",
+        "FORGET BLE",
     };
 
     char vals[TOTAL_ITEMS][20];
     if (settings.volumePct == 0) snprintf(vals[0], sizeof(vals[0]), "MUTE");
     else                         snprintf(vals[0], sizeof(vals[0]), "%d%%", settings.volumePct);
     snprintf(vals[1], sizeof(vals[1]), "%s", settings.gameMode == GameMode::RACE_30S ? "30S RACE" : "ENDLESS");
-    snprintf(vals[2], sizeof(vals[2]), "%s", settings.imuEnabled ? "ON" : "OFF (KEYS)");
-    snprintf(vals[3], sizeof(vals[3]), "%s", settings.imuMode == ImuMode::TILT_ALT ? "TILT+ALT" : "TILT+SPD");
-    snprintf(vals[4], sizeof(vals[4]), "%s", settings.imuInvertY ? "YES" : "NO");
-    snprintf(vals[5], sizeof(vals[5]), "%s", chMapLabel(settings.channelMap));
-    snprintf(vals[6], sizeof(vals[6]), "%s", rateLabel(settings.rates));
-    snprintf(vals[7], sizeof(vals[7]), "%s", settings.camTilt ? "FPV 3D" : "CLASSIC");
-    snprintf(vals[8], sizeof(vals[8]), "%s", settings.analogFx ? "ON" : "CLEAN");
-    snprintf(vals[9], sizeof(vals[9]), "%s", settings.osdBattery == OsdBatterySource::SIM_4S ? "4S SIM" : "REAL");
-    if (ui.bleConnected)      snprintf(vals[10], sizeof(vals[10]), "DISCONN");
+    snprintf(vals[2], sizeof(vals[2]), "%s", settings.imuEnabled ? "ON" : "OFF");
+    snprintf(vals[3], sizeof(vals[3]), "%s", settings.imuMode == ImuMode::TILT_ALT ? "ALTITUDE" : "SPEED");
+    snprintf(vals[4], sizeof(vals[4]), "%s", settings.imuInvertY ? "ON" : "OFF");
+    snprintf(vals[5], sizeof(vals[5]), "%s",
+             settings.rates == RateProfile::RATE_LOW  ? "LOW" :
+             settings.rates == RateProfile::RATE_HIGH ? "HIGH" : "MED");
+    snprintf(vals[6], sizeof(vals[6]), "%s", settings.camTilt ? "ON" : "OFF");
+    snprintf(vals[7], sizeof(vals[7]), "%s", settings.analogFx ? "ON" : "OFF");
+    snprintf(vals[8], sizeof(vals[8]), "%s", settings.osdBattery == OsdBatterySource::SIM_4S ? "SIM 4S" : "DEVICE");
+    snprintf(vals[9], sizeof(vals[9]), "%s", chMapLabel(settings.channelMap));
+    if (ui.bleConnected)      snprintf(vals[10], sizeof(vals[10]), "UNLINK");
     else if (ui.bleScanning)  snprintf(vals[10], sizeof(vals[10]), "SCANNING");
-    else                      snprintf(vals[10], sizeof(vals[10]), "SCAN NOW");
+    else                      snprintf(vals[10], sizeof(vals[10]), "SCAN");
     snprintf(vals[11], sizeof(vals[11]), "CLEAR");
 
     constexpr int VISIBLE = 7;
@@ -613,14 +626,23 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
         int y = 23 + row * 13;
         bool sel = (idx == ui.selectedItem);
         if (sel) {
-            fillRectAlpha(fb, 10, y - 2, SCREEN_W - 20, 11, OSD_CYAN, 60);
-            drawTextOutlined(fb, 14, y, ">", OSD_GREEN);
+            fillRectAlpha(fb, 10, y - 2, SCREEN_W - 26, 11, OSD_CYAN, 60);
+            drawTextOutlined(fb, 13, y, ">", OSD_GREEN);
         }
-        drawTextOutlined(fb, 24, y, labels[idx], sel ? OSD_WHITE : OSD_DIM);
-        drawTextOutlined(fb, 144, y, vals[idx], sel ? OSD_AMBER : OSD_CYAN);
+        drawTextOutlined(fb, 23, y, labels[idx], sel ? OSD_WHITE : OSD_DIM);
+        drawTextOutlined(fb, 138, y, vals[idx], sel ? OSD_AMBER : OSD_CYAN);
     }
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 15, "UP/DN:SEL  ENTER:CHG  ESC:BACK", OSD_DIM, 1);
+    // Subtle vertical scroll track & thumb on right edge
+    constexpr int trackX = SCREEN_W - 11;
+    constexpr int trackY = 22;
+    constexpr int trackH = 88;
+    fillRectAlpha(fb, trackX, trackY, 3, trackH, OSD_DIM, 55);
+    int thumbH = (trackH * VISIBLE) / TOTAL_ITEMS;
+    int thumbY = trackY + ((trackH - thumbH) * topIdx) / (TOTAL_ITEMS - VISIBLE);
+    fillRectAlpha(fb, trackX, thumbY, 3, thumbH, OSD_CYAN, 210);
+
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "UP/DN:MOVE  ENTER:SET  ESC:BACK", OSD_DIM, 1);
 }
 
 void BetaflightOsd::drawStickMonitor(uint16_t* fb,
@@ -631,19 +653,23 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
     drawRect(fb, 4, 4, SCREEN_W - 8, SCREEN_H - 8, OSD_GREEN);
 
     char buf[64];
-    snprintf(buf, sizeof(buf), "INPUT DIAG - %s (%s)",
-             inputSourceLabel(input.source, input.isElrsBle),
-             chMapLabel(settings.channelMap));
+    if (input.source == InputSource::IMU_KB) {
+        snprintf(buf, sizeof(buf), "INPUTS - %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS");
+    } else {
+        snprintf(buf, sizeof(buf), "INPUTS - %s (%s)",
+                 inputSourceLabel(input.source, input.isElrsBle),
+                 chMapLabel(settings.channelMap));
+    }
     drawTextCentered(fb, SCREEN_W / 2, 8, buf, OSD_AMBER, 1);
 
-    // Left column: Mapped flight axes (AIL, ELE, THR, RUD)
-    const char* axisName[4] = {"AIL", "ELE", "THR", "RUD"};
+    // Left column: Mapped flight axes
+    const char* axisName[4] = {"ROLL", "PTCH", "THR", "YAW"};
     const float axisVal[4]  = {input.roll, input.pitch, input.throttle, input.yaw};
 
     for (int i = 0; i < 4; ++i) {
         int y = 21 + i * 13;
         drawTextOutlined(fb, 10, y, axisName[i], OSD_WHITE);
-        int bx = 34, bw = 84, bh = 8;
+        int bx = 38, bw = 78, bh = 8;
         drawRect(fb, bx, y, bw, bh, OSD_DIM);
         int mid = bx + bw / 2;
         putPixel(fb, mid, y + 1, OSD_WHITE);
@@ -657,26 +683,26 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
         }
     }
 
-    // Right column: Raw CH1..CH4 in Betaflight us + ARM/BAT
+    // Right column: Raw CH1..CH4 in microseconds
     for (int i = 0; i < 4; ++i) {
         int y = 21 + i * 13;
         int us = 1500 + static_cast<int>(input.rawCh[i] * 500.0f);
         snprintf(buf, sizeof(buf), "CH%d:%4d", i + 1, us);
-        drawTextOutlined(fb, 126, y, buf, OSD_WHITE);
+        drawTextOutlined(fb, 124, y, buf, OSD_WHITE);
     }
 
-    // Live IMU + ARM + Battery
-    snprintf(buf, sizeof(buf), "IMU R:%+3.0f P:%+3.0f  ARM:%s",
-             ui.imuRollDeg, ui.imuPitchDeg, input.armSwitch ? "ON" : "NO");
+    // Live Tilt + ARM
+    snprintf(buf, sizeof(buf), "TILT R:%+3.0f  P:%+3.0f  ARM:%s",
+             ui.imuRollDeg, ui.imuPitchDeg, input.armSwitch ? "ON" : "OFF");
     drawTextOutlined(fb, 10, 76, buf, ui.imuPresent ? OSD_CYAN : OSD_RED);
 
     // Live USB Host Status & Packet Count
-    snprintf(buf, sizeof(buf), "USB:%s (%lu)", ui.usbStatus, static_cast<unsigned long>(ui.usbPkts));
+    snprintf(buf, sizeof(buf), "USB: %s (%lu)", ui.usbStatus, static_cast<unsigned long>(ui.usbPkts));
     drawTextOutlined(fb, 10, 88, buf, ui.usbConnected ? OSD_GREEN : OSD_AMBER);
 
     // Live BLE Host Status & Packet Count
-    snprintf(buf, sizeof(buf), "BLE:%s (%lu)", ui.bleStatus, static_cast<unsigned long>(ui.blePkts));
+    snprintf(buf, sizeof(buf), "BLE: %s (%lu)", ui.bleStatus, static_cast<unsigned long>(ui.blePkts));
     drawTextOutlined(fb, 10, 100, buf, ui.bleConnected ? OSD_GREEN : OSD_CYAN);
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 15, "[C]ZERO [B]BLE [X]CLRBND [ESC]OK", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "[C]CENTER [B]BLE [X]RESET [ESC]", OSD_DIM, 1);
 }

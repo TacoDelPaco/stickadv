@@ -28,31 +28,29 @@
 | `Del` / `` ` `` (ESC) | Abort Run / Back |
 | `C` | Zero / Calibrate BMI270 IMU to current holding angle |
 | `B` | Toggle BLE Scan / Disconnect BLE Radio |
-| `M` / `Tab` | Open Betaflight OSD CMS Settings Menu |
-| `K` | Open Live 8-Channel Stick & IMU Monitor |
+| `M` / `Tab` | Open Settings Menu |
+| `K` | Open Live 8-Channel Input Monitor |
 
 ### IMU + Keyboard Flight (when no USB/BLE radio is connected)
 | Input | Action |
 |---|---|
 | **Tilt Left / Right** (or `A`/`D`, `,`/`/`) | Roll (move left / right + camera bank) |
-| **Tilt Forward / Back** (or `E`/`Q`) | Pitch (accelerate forward / slow down) |
-| **`W` / `;` (Up) / `Space`** | Throttle Up (climb) |
-| **`S` / `.` (Down) / `Shift`** | Throttle Down (descend) |
-
-*(With `IMU ALT HLD = ON` in Settings, releasing throttle keys smoothly hovers at your current altitude.)*
+| **Tilt Up / Down** (or `W`/`S`, `;`/`.`) | Climb / Dive altitude (or Speed in `TILT UP/DN = SPEED` mode) |
+| **`Space`** | Speed Boost (faster forward) |
+| **`Shift`** | Brake (slow down) |
 
 ## Connecting an EdgeTX / ExpressLRS Radio
 
 ### Option A: Wireless via ExpressLRS BLE Joystick (Recommended — Zero Cable!)
 1. On your EdgeTX radio, open `SYS` → **ExpressLRS** Lua script → **BLE Joystick**.
-2. On the Cardputer-Adv Title screen, press **`B`** (or open `[M] SETUP → BLE RADIO → SCAN NOW`).
-3. The Cardputer-Adv connects to `"ELRS Joystick"` at a **7.5 ms** BLE interval (133 Hz) and automatically applies ExpressLRS's channel order. Open **`K` (Stick Monitor)** to verify all channels live.
+2. On the Cardputer-Adv Title screen, press **`B`** (or open **`[M] SETTINGS → BLE RADIO → SCAN`**).
+3. The Cardputer-Adv connects to `"ELRS Joystick"` at a **7.5 ms** BLE interval (133 Hz) and automatically applies ExpressLRS's channel order. Open **`K` (Inputs)** to verify all channels live.
 
 ### Option B: Wired via USB-C OTG (EdgeTX USB Joystick HID)
 1. Power on the Cardputer-Adv via its side power switch.
 2. Connect your EdgeTX radio to the Cardputer-Adv USB-C port using a **USB-C OTG cable** (or a **powered USB-C OTG hub / Y-splitter** if your EdgeTX radio requires 5 V on VBUS to display the USB mode prompt — the Stamp-S3A does not include an internal 5 V VBUS boost converter).
 3. Select **USB Joystick (HID)** on your EdgeTX radio. The OSD automatically switches to `USB:99`.
-4. Choose your transmitter channel order (`AETR`, `TAER`, or `AERT`) in **`[M] SETUP → CH MAPPING`**.
+4. Choose your transmitter channel order (`AETR`, `TAER`, or `AERT`) in **`[M] SETTINGS → RADIO MAP`**.
 
 ## Pre-Built Firmware (`dist/`)
 
@@ -86,8 +84,9 @@ pio run -e cardputer-adv -t upload
 ### Run Host Unit & Render Tests (Linux/macOS)
 ```bash
 g++ -std=c++17 -O2 -Wall -Wextra -Iinclude \
-    test/test_core.cpp src/hid_parser.cpp src/sim_engine.cpp \
-    src/renderer.cpp src/betaflight_osd.cpp -lm -o /tmp/test_core && /tmp/test_core
+    test/test_core.cpp src/hid_parser.cpp src/imu_controller.cpp \
+    src/sim_engine.cpp src/renderer.cpp src/betaflight_osd.cpp \
+    -lm -o /tmp/test_core && /tmp/test_core
 ```
 
 ## Credits

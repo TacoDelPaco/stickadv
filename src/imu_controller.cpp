@@ -20,7 +20,44 @@ inline float applyDeadzone(float v, float dz) {
 constexpr float MAX_TILT_ROLL_DEG  = 22.0f;
 constexpr float MAX_TILT_PITCH_DEG = 18.0f;
 
+// Playable digital keyboard sensitivity: gentle peak throw + smooth ramp for
+// micro-adjustments through gates, with crisp release so there is no drift.
+constexpr float KB_ROLL_MAX      = 0.44f; // ~132 u/s at MED sensitivity
+constexpr float KB_VERT_MAX      = 0.28f; // ~119 u/s at MED sensitivity
+constexpr float KB_ROLL_RAMP     = 1.85f; // 0 -> KB_ROLL_MAX in ~0.24s
+constexpr float KB_VERT_RAMP     = 1.30f; // 0 -> KB_VERT_MAX in ~0.22s
+constexpr float KB_RELEASE_DECAY = 14.0f; // Returns to 0 in ~0.03s on key release
+
+inline float stepKeyAxis(float current, bool posHeld, bool negHeld,
+                         float maxVal, float rampRate, float dt) {
+    if (posHeld && !negHeld) {
+        if (current < 0.0f) current = 0.0f;
+        return clampf(current + rampRate * dt, 0.0f, maxVal);
+    }
+    if (negHeld && !posHeld) {
+        if (current > 0.0f) current = 0.0f;
+        return clampf(current - rampRate * dt, -maxVal, 0.0f);
+    }
+    float decay = KB_RELEASE_DECAY * dt;
+    if (fabsf(current) <= decay) return 0.0f;
+    return (current > 0.0f) ? (current - decay) : (current + decay);
+}
+
 } // namespace
+
+void ImuController::computeTiltAxes(float rawRollDeg, float rawPitchDeg,
+                                    float zeroRollDeg, float zeroPitchDeg,
+                                    bool invertY, float& outRoll, float& outTilt) {
+    // Cardputer-Adv BMI270 X and Y axes are negated relative to pilot/screen frame:
+    //  - tilting right  -> positive roll (+1.0)
+    //  - tilting up     -> positive tilt (+1.0 = climb in TILT_ALT)
+    float relRoll  = -(rawRollDeg  - zeroRollDeg);
+    float relPitch = -(rawPitchDeg - zeroPitchDeg);
+    if (invertY) relPitch = -relPitch;
+
+    outRoll = applyDeadzone(clampf(relRoll  / MAX_TILT_ROLL_DEG,  -1.0f, 1.0f), 0.07f);
+    outTilt = applyDeadzone(clampf(relPitch / MAX_TILT_PITCH_DEG, -1.0f, 1.0f), 0.07f);
+}
 
 bool ImuController::begin() {
 #ifdef ARDUINO
@@ -70,45 +107,41 @@ void ImuController::update(float dt, const KeyFlightState& keys, const SimSettin
         _pitchDeg = ALPHA * (_pitchDeg + gx * dt) + (1.0f - ALPHA) * accPitch;
 
         if (settings.imuEnabled) {
-            // Cardputer-Adv BMI270 X-axis is negated relative to screen right:
-            // tilting Cardputer RIGHT must produce positive roll (+1.0)!
-            float relRoll  = -(_rollDeg - _zeroRollDeg);
-            // Tilting top of Cardputer toward user (nose up) -> positive (+1.0 = climb up)
-            float relPitch =  (_pitchDeg - _zeroPitchDeg);
-            if (settings.imuInvertY) relPitch = -relPitch;
-
-            imuRoll = applyDeadzone(clampf(relRoll  / MAX_TILT_ROLL_DEG,  -1.0f, 1.0f), 0.07f);
-            imuTilt = applyDeadzone(clampf(relPitch / MAX_TILT_PITCH_DEG, -1.0f, 1.0f), 0.07f);
+            computeTiltAxes(_rollDeg, _pitchDeg, _zeroRollDeg, _zeroPitchDeg,
+                            settings.imuInvertY, imuRoll, imuTilt);
         }
     }
 #endif
 
-    // Arrow Keys (always super crisp & take priority over IMU when held!)
+    // Arrow Keys (smooth, controlled sensitivity; takes priority over IMU when pressed)
     bool anyHorizKey = keys.left || keys.right;
     bool anyVertKey  = keys.up   || keys.down;
 
-    float kbRoll = (keys.right ? 0.90f : 0.0f) - (keys.left ? 0.90f : 0.0f);
-    float kbVert = (keys.up    ? 0.90f : 0.0f) - (keys.down ? 0.90f : 0.0f);
+    _kbRoll = stepKeyAxis(_kbRoll, keys.right, keys.left, KB_ROLL_MAX, KB_ROLL_RAMP, dt);
+    _kbVert = stepKeyAxis(_kbVert, keys.up,    keys.down, KB_VERT_MAX, KB_VERT_RAMP, dt);
 
-    float finalRoll = anyHorizKey ? kbRoll : imuRoll;
-    float finalThr  = 0.0f;
-    float finalPitch = 0.42f; // Brisk auto-cruise forward speed (~65 km/h)
+    bool useKbRoll = anyHorizKey || (fabsf(_kbRoll) > 0.001f);
+    bool useKbVert = anyVertKey  || (fabsf(_kbVert) > 0.001f);
+
+    float finalRoll  = useKbRoll ? _kbRoll : imuRoll;
+    float finalThr   = 0.0f;
+    float finalPitch = 0.42f; // Brisk auto-cruise forward speed
 
     if (settings.imuMode == ImuMode::TILT_ALT || !settings.imuEnabled || !_imuPresent) {
         // Intuitive Handheld / Arrow-Key Mode:
         //   Left/Right (arrows or tilt) -> X steering
         //   Up/Down    (arrows or tilt) -> Climb / Dive altitude
-        //   Space / Shift               -> Turbo forward / Slow brake
-        finalThr = anyVertKey ? kbVert : imuTilt;
-        if (keys.boost)      finalPitch = 0.95f;
+        //   Space / Shift               -> Speed boost / Brake
+        finalThr = useKbVert ? _kbVert : imuTilt;
+        if (keys.boost)      finalPitch = 0.85f;
         else if (keys.brake) finalPitch = 0.08f;
     } else {
         // Classic TILT_SPD mode:
         //   Tilt forward/back -> Forward Speed (pitch)
         //   Up/Down arrows    -> Altitude (throttle)
-        finalThr   = kbVert;
+        finalThr   = _kbVert;
         finalPitch = clampf(0.42f - imuTilt * 0.58f, 0.02f, 1.0f);
-        if (keys.boost)      finalPitch = 1.0f;
+        if (keys.boost)      finalPitch = 0.90f;
         else if (keys.brake) finalPitch = 0.05f;
     }
 

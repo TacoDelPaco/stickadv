@@ -89,60 +89,63 @@ void adjustVolume(int delta) {
     g_audio.playVolumePip();
 }
 
-void cycleVolumePreset() {
+void stepVolumePreset(int delta) {
     static const uint8_t kSteps[] = {0, 10, 20, 35, 50, 75, 100};
-    for (size_t i = 0; i < sizeof(kSteps); ++i) {
-        if (g_settings.volumePct < kSteps[i]) {
-            g_settings.volumePct = kSteps[i];
-            g_audio.setVolumePct(g_settings.volumePct);
-            g_storage.saveSettings(g_settings);
-            g_audio.playVolumePip();
-            return;
-        }
+    constexpr int kCount = static_cast<int>(sizeof(kSteps) / sizeof(kSteps[0]));
+    int nearest = 0;
+    for (int i = 0; i < kCount; ++i) {
+        if (g_settings.volumePct >= kSteps[i]) nearest = i;
     }
-    g_settings.volumePct = 0;
-    g_audio.setVolumePct(0);
+    int next = (nearest + delta + kCount) % kCount;
+    g_settings.volumePct = kSteps[next];
+    g_audio.setVolumePct(g_settings.volumePct);
     g_storage.saveSettings(g_settings);
+    if (g_settings.volumePct > 0) g_audio.playVolumePip();
 }
 
-void cycleSettingItem(int idx) {
+void cycleSettingItem(int idx, int delta) {
     switch (idx) {
-        case 0:
-            cycleVolumePreset();
+        case 0: // VOLUME
+            stepVolumePreset(delta);
             return;
-        case 1:
+        case 1: // GAME MODE
             g_settings.gameMode = static_cast<GameMode>(
-                (static_cast<uint8_t>(g_settings.gameMode) + 1) % static_cast<uint8_t>(GameMode::COUNT));
+                (static_cast<int>(g_settings.gameMode) + delta + static_cast<int>(GameMode::COUNT)) %
+                static_cast<int>(GameMode::COUNT));
             break;
-        case 2:
+        case 2: // TILT CTRL
             g_settings.imuEnabled = !g_settings.imuEnabled;
             break;
-        case 3:
+        case 3: // TILT UP/DN
             g_settings.imuMode = static_cast<ImuMode>(
-                (static_cast<uint8_t>(g_settings.imuMode) + 1) % static_cast<uint8_t>(ImuMode::COUNT));
+                (static_cast<int>(g_settings.imuMode) + delta + static_cast<int>(ImuMode::COUNT)) %
+                static_cast<int>(ImuMode::COUNT));
             break;
-        case 4:
+        case 4: // INVERT Y
             g_settings.imuInvertY = !g_settings.imuInvertY;
             break;
-        case 5:
-            g_settings.channelMap = static_cast<ChannelMap>(
-                (static_cast<uint8_t>(g_settings.channelMap) + 1) % static_cast<uint8_t>(ChannelMap::COUNT));
-            break;
-        case 6:
+        case 5: // SENSITIVITY
             g_settings.rates = static_cast<RateProfile>(
-                (static_cast<uint8_t>(g_settings.rates) + 1) % static_cast<uint8_t>(RateProfile::COUNT));
+                (static_cast<int>(g_settings.rates) + delta + static_cast<int>(RateProfile::COUNT)) %
+                static_cast<int>(RateProfile::COUNT));
             break;
-        case 7:
+        case 6: // CAM ROLL
             g_settings.camTilt = !g_settings.camTilt;
             break;
-        case 8:
+        case 7: // CRT EFFECT
             g_settings.analogFx = !g_settings.analogFx;
             break;
-        case 9:
+        case 8: // BATTERY
             g_settings.osdBattery = static_cast<OsdBatterySource>(
-                (static_cast<uint8_t>(g_settings.osdBattery) + 1) % static_cast<uint8_t>(OsdBatterySource::COUNT));
+                (static_cast<int>(g_settings.osdBattery) + delta + static_cast<int>(OsdBatterySource::COUNT)) %
+                static_cast<int>(OsdBatterySource::COUNT));
             break;
-        case 10:
+        case 9: // RADIO MAP
+            g_settings.channelMap = static_cast<ChannelMap>(
+                (static_cast<int>(g_settings.channelMap) + delta + static_cast<int>(ChannelMap::COUNT)) %
+                static_cast<int>(ChannelMap::COUNT));
+            break;
+        case 10: // BLE RADIO
             if (g_inputMgr.isBleConnected()) {
                 g_inputMgr.disconnectBle();
             } else if (g_inputMgr.isBleScanning()) {
@@ -151,8 +154,9 @@ void cycleSettingItem(int idx) {
                 g_inputMgr.startBleScan();
             }
             return;
-        case 11:
+        case 11: // FORGET BLE
             g_inputMgr.clearBleBonds();
+            g_sim.notifyToast("BLE CLEARED", 1.2f);
             return;
         default:
             return;
@@ -169,6 +173,7 @@ void handleDiscreteKeys() {
     bool hitEsc   = kbChanged && (ks.esc || ks.del || ks.backspace || keyPressedChar(ks, '`'));
     bool hitUp    = kbChanged && (ks.up    || keyPressedChar(ks, ';') || keyPressedChar(ks, 'w'));
     bool hitDown  = kbChanged && (ks.down  || keyPressedChar(ks, '.') || keyPressedChar(ks, 's'));
+    bool hitLeft  = kbChanged && (ks.left  || keyPressedChar(ks, ',') || keyPressedChar(ks, 'a'));
     bool hitRight = kbChanged && (ks.right || keyPressedChar(ks, '/') || keyPressedChar(ks, 'd') || ks.space);
     bool hitM     = kbChanged && (keyPressedChar(ks, 'm') || ks.tab);
     bool hitK     = kbChanged && keyPressedChar(ks, 'k');
@@ -193,7 +198,7 @@ void handleDiscreteKeys() {
     if (hitI && g_screen != AppScreen::SETTINGS) {
         g_settings.imuEnabled = !g_settings.imuEnabled;
         g_storage.saveSettings(g_settings);
-        g_sim.notifyToast(g_settings.imuEnabled ? "IMU: ON" : "IMU: OFF (KEYS)", 1.2f);
+        g_sim.notifyToast(g_settings.imuEnabled ? "TILT: ON" : "TILT: OFF (KEYS)", 1.2f);
     }
 
     // Global BLE scan shortcut ('B') when not mid-flight
@@ -215,7 +220,9 @@ void handleDiscreteKeys() {
         } else if (hitDown) {
             g_ui.selectedItem = (g_ui.selectedItem + 1) % SETTINGS_COUNT;
         } else if (hitEnter || hitRight) {
-            cycleSettingItem(g_ui.selectedItem);
+            cycleSettingItem(g_ui.selectedItem, +1);
+        } else if (hitLeft) {
+            cycleSettingItem(g_ui.selectedItem, -1);
         } else if (hitEsc || hitM) {
             g_screen = AppScreen::SIM_VIEW;
         }
