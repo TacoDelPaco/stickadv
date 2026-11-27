@@ -5,11 +5,11 @@
 
 // ============================================================================
 // Cardputer-Adv BMI270 6-Axis IMU + Arrow-Key Flight Controller
-// - Arrow Keys (; . , / with or without Fn, or WASD):
+// - Arrow Keys (; . , / with or without Fn, or WASD) when imuEnabled == false:
 //     Left / Right = Roll left/right
 //     Up / Down    = Climb / Dive altitude
 //     Shift        = Brake / slow down
-// - BMI270 IMU (when imuEnabled == true):
+// - BMI270 IMU (when imuEnabled == true; flying keys disabled):
 //     Tilt Left / Right = Roll left/right (corrected Cardputer-Adv sign!)
 //     Tilt Up / Down    = Climb / Dive altitude (TILT_ALT) or Speed (TILT_SPD)
 //     Press 'C' anytime to zero comfortable handheld holding angle.

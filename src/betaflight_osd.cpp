@@ -388,10 +388,13 @@ void BetaflightOsd::drawFlightOsd(uint16_t* fb,
     // ---- Center Betaflight Crosshair & Artificial Horizon ----
     drawArtificialHorizon(fb, t.rollRad, t.pitchRad, t.throttlePct, t.altitudeM);
 
-    // ---- Top-Left: Link Quality & Source + Gate Score ----
+    // ---- Top-Left: Link Quality (RSSI) & Gate Score ----
     uint16_t lqCol = (t.rssiPct < 45) ? OSD_RED : ((t.rssiPct < 70) ? OSD_AMBER : OSD_WHITE);
     drawIconOutlined(fb, 4, 4, OsdIcon::ANTENNA, lqCol);
-    snprintf(buf, sizeof(buf), "%s %02d%%", inputSourceLabel(input.source, input.isElrsBle, settings.imuEnabled), t.rssiPct);
+    const char* lqLabel = (input.source == InputSource::IMU_KB)
+                              ? "RSSI"
+                              : inputSourceLabel(input.source, input.isElrsBle);
+    snprintf(buf, sizeof(buf), "%s %02d%%", lqLabel, t.rssiPct);
     drawTextOutlined(fb, 13, 4, buf, lqCol);
 
     drawIconOutlined(fb, 4, 15, OsdIcon::GATE, OSD_GREEN);
@@ -496,9 +499,9 @@ void BetaflightOsd::drawTitleOverlay(uint16_t* fb,
         snprintf(buf, sizeof(buf), "BLE: %s", ui.bleStatus);
         srcCol = strstr(ui.bleStatus, "ERR") || strstr(ui.bleStatus, "DISC") ? OSD_RED : OSD_CYAN;
     } else if (settings.imuEnabled && ui.imuPresent) {
-        snprintf(buf, sizeof(buf), "INPUT: TILT + KEYS");
+        snprintf(buf, sizeof(buf), "INPUT: TILT");
     } else {
-        snprintf(buf, sizeof(buf), "INPUT: KEYS ONLY");
+        snprintf(buf, sizeof(buf), "INPUT: KEYS");
     }
     drawTextCentered(fb, SCREEN_W / 2, 39, buf, srcCol, 1);
 
@@ -563,7 +566,7 @@ void BetaflightOsd::drawPostFlightStats(uint16_t* fb,
     drawTextOutlined(fb, 24, 64, buf, OSD_WHITE);
 
     if (input.source == InputSource::IMU_KB) {
-        snprintf(buf, sizeof(buf), "INPUT     : %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS ONLY");
+        snprintf(buf, sizeof(buf), "INPUT     : %s", settings.imuEnabled ? "TILT" : "KEYS");
     } else {
         snprintf(buf, sizeof(buf), "INPUT     : %s (%s)",
                  inputSourceLabel(input.source, input.isElrsBle),
@@ -648,7 +651,7 @@ void BetaflightOsd::drawSettingsMenu(uint16_t* fb,
     int thumbY = trackY + ((trackH - thumbH) * topIdx) / (TOTAL_ITEMS - VISIBLE);
     fillRectAlpha(fb, trackX, thumbY, 3, thumbH, OSD_CYAN, 210);
 
-    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "ARROWS: MOVE  OK: SET  DEL: BACK", OSD_DIM, 1);
+    drawTextCentered(fb, SCREEN_W / 2, SCREEN_H - 14, "[ARROWS] MOVE  [OK] SET  [DEL] BACK", OSD_DIM, 1);
 }
 
 void BetaflightOsd::drawStickMonitor(uint16_t* fb,
@@ -660,7 +663,7 @@ void BetaflightOsd::drawStickMonitor(uint16_t* fb,
 
     char buf[64];
     if (input.source == InputSource::IMU_KB) {
-        snprintf(buf, sizeof(buf), "INPUTS - %s", settings.imuEnabled ? "TILT + KEYS" : "KEYS ONLY");
+        snprintf(buf, sizeof(buf), "INPUTS - [I] %s", settings.imuEnabled ? "TILT" : "KEYS");
     } else {
         snprintf(buf, sizeof(buf), "INPUTS - %s (%s)",
                  inputSourceLabel(input.source, input.isElrsBle),

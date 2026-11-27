@@ -193,8 +193,17 @@ static void testRendererAndOsdVisuals() {
     BetaflightOsd::drawFlightOsd(fb, sim, in, settings, 42);
     writePpm("/tmp/stickadv_flight.ppm", fb);
 
+    // Also render Flight OSD in internal TILT mode (verifies RSSI 99% label instead of TILT 99%)
+    PilotInput tiltIn = in;
+    tiltIn.source = InputSource::IMU_KB;
+    tiltIn.isElrsBle = false;
+    FpvRenderer::renderScene(fb, sim, settings, 42);
+    BetaflightOsd::drawFlightOsd(fb, sim, tiltIn, settings, 42);
+    writePpm("/tmp/stickadv_flight_tilt.ppm", fb);
+
     // Also render title overlay, settings menu, stick monitor & post-flight stats
     UiMenuState ui;
+    ui.imuPresent   = true;
     ui.usbConnected = false;
     ui.bleConnected = true;
     strcpy(ui.blePeerName, "ELRS JOYSTICK");
@@ -218,6 +227,18 @@ static void testRendererAndOsdVisuals() {
     BetaflightOsd::drawStickMonitor(fb, in, settings, ui);
     writePpm("/tmp/stickadv_inputs.ppm", fb);
 
+    // Render Inputs screen in both TILT and KEYS internal modes
+    settings.imuEnabled = true;
+    FpvRenderer::renderScene(fb, sim, settings, 10);
+    BetaflightOsd::drawStickMonitor(fb, tiltIn, settings, ui);
+    writePpm("/tmp/stickadv_inputs_tilt.ppm", fb);
+
+    settings.imuEnabled = false;
+    FpvRenderer::renderScene(fb, sim, settings, 10);
+    BetaflightOsd::drawStickMonitor(fb, tiltIn, settings, ui);
+    writePpm("/tmp/stickadv_inputs_keys.ppm", fb);
+
+    settings.imuEnabled = true;
     FpvRenderer::renderScene(fb, sim, settings, 10);
     BetaflightOsd::drawPostFlightStats(fb, sim, in, settings, 10);
     writePpm("/tmp/stickadv_postflight.ppm", fb);
@@ -268,7 +289,31 @@ static void testImuAndKeyboardControls() {
     assert(in.roll > 0.35f && in.roll <= 0.45f);
     assert(in.throttle > 0.20f && in.throttle <= 0.30f);
 
-    // Release should return cleanly to zero within ~50ms (3-4 frames)
+    // 3. Enabling IMU mode must immediately disable flying keys (arrows/WASD/brake)
+    settings.imuEnabled = true;
+    keys.brake = true;
+    for (int i = 0; i < 10; ++i) {
+        ctrl.update(1.0f / 60.0f, keys, settings, in);
+    }
+    assert(nearf(in.roll, 0.0f, 0.001f));
+    assert(nearf(in.throttle, 0.0f, 0.001f));
+    assert(nearf(in.pitch, 0.42f, 0.001f));
+
+    // Also verify flying keys remain disabled in TILT_SPD mode
+    settings.imuMode = ImuMode::TILT_SPD;
+    ctrl.update(1.0f / 60.0f, keys, settings, in);
+    assert(nearf(in.roll, 0.0f, 0.001f));
+    assert(nearf(in.throttle, 0.0f, 0.001f));
+    assert(nearf(in.pitch, 0.42f, 0.001f));
+
+    // Re-enabling keyboard mode starts cleanly from 0 and releases back to 0 within ~50ms
+    settings.imuEnabled = false;
+    settings.imuMode = ImuMode::TILT_ALT;
+    keys.brake = false;
+    for (int i = 0; i < 60; ++i) {
+        ctrl.update(1.0f / 60.0f, keys, settings, in);
+    }
+    assert(in.roll > 0.35f);
     keys.right = false;
     keys.up    = false;
     for (int i = 0; i < 4; ++i) {
@@ -277,7 +322,7 @@ static void testImuAndKeyboardControls() {
     assert(nearf(in.roll, 0.0f, 0.001f));
     assert(nearf(in.throttle, 0.0f, 0.001f));
 
-    printf("[PASS] Flipped IMU up/down axis & lowered smooth keyboard sensitivity\n");
+    printf("[PASS] IMU/keyboard isolation, flipped IMU axes & smooth keyboard sensitivity\n");
 }
 
 int main() {

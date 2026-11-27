@@ -122,7 +122,7 @@ enum class OsdBatterySource : uint8_t {
 
 enum class ImuMode : uint8_t {
     TILT_ALT = 0,   // Intuitive handheld: tilt L/R = X, tilt Up/Down = Altitude Y, auto-cruise
-    TILT_SPD = 1,   // Classic: tilt L/R = X, tilt Fwd/Back = Speed, Arrows = Altitude
+    TILT_SPD = 1,   // Classic: tilt L/R = X, tilt Fwd/Back = Speed
     COUNT    = 2
 };
 

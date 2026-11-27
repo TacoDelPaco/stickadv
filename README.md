@@ -27,16 +27,17 @@
 | `OK` (`Enter`) / `G0` (`BtnA`) / EdgeTX `ARM` (`CH5` or `Btn1`) | Arm & Start / Restart Run |
 | `Del` / `` ` `` | Abort Run / Back |
 | `C` | Zero / Calibrate BMI270 IMU to current holding angle |
+| `I` | Toggle between Tilt (IMU) and Keys flight mode |
 | `B` | Toggle BLE Scan / Disconnect BLE Radio |
 | `M` / `Tab` | Open Settings Menu (Title & Post-Flight; disabled mid-flight) |
 | `K` | Open Live 8-Channel Input Monitor |
 
-### IMU + Keyboard Flight (when no USB/BLE radio is connected)
+### IMU or Keyboard Flight (when no USB/BLE radio is connected)
 | Input | Action |
 |---|---|
-| **Tilt Left / Right** (or `A`/`D`, `,`/`/`) | Roll (move left / right + camera bank) |
-| **Tilt Up / Down** (or `W`/`S`, `;`/`.`) | Climb / Dive altitude (or Speed in `TILT UP/DOWN = SPEED` mode) |
-| **`Aa` (`Shift`)** | Brake (slow down) |
+| **Tilt Left / Right** (`TILT FLY = ON`) or `A`/`D`, `,`/`/` (`TILT FLY = OFF`) | Roll (move left / right + camera bank) |
+| **Tilt Up / Down** (`TILT FLY = ON`) or `W`/`S`, `;`/`.` (`TILT FLY = OFF`) | Climb / Dive altitude (or Speed in `TILT UP/DOWN = SPEED` mode) |
+| **`Aa` (`Shift`)** (`TILT FLY = OFF`) | Brake (slow down) |
 
 ## Connecting an EdgeTX / ExpressLRS Radio
 

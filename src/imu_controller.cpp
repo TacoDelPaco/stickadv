@@ -114,34 +114,34 @@ void ImuController::update(float dt, const KeyFlightState& keys, const SimSettin
     }
 #endif
 
-    // Arrow Keys (smooth, controlled sensitivity; takes priority over IMU when pressed)
-    bool anyHorizKey = keys.left || keys.right;
-    bool anyVertKey  = keys.up   || keys.down;
-
-    _kbRoll = stepKeyAxis(_kbRoll, keys.right, keys.left, KB_ROLL_MAX, KB_ROLL_RAMP, dt);
-    _kbVert = stepKeyAxis(_kbVert, keys.up,    keys.down, KB_VERT_MAX, KB_VERT_RAMP, dt);
-
-    bool useKbRoll = anyHorizKey || (fabsf(_kbRoll) > 0.001f);
-    bool useKbVert = anyVertKey  || (fabsf(_kbVert) > 0.001f);
-
-    float finalRoll  = useKbRoll ? _kbRoll : imuRoll;
+    float finalRoll  = 0.0f;
     float finalThr   = 0.0f;
     float finalPitch = 0.42f; // Brisk auto-cruise forward speed
 
-    if (settings.imuMode == ImuMode::TILT_ALT || !settings.imuEnabled || !_imuPresent) {
-        // Intuitive Handheld / Arrow-Key Mode:
-        //   Left/Right (arrows or tilt) -> X steering
-        //   Up/Down    (arrows or tilt) -> Climb / Dive altitude
-        //   Shift                       -> Brake
-        finalThr = useKbVert ? _kbVert : imuTilt;
-        if (keys.brake) finalPitch = 0.08f;
+    if (settings.imuEnabled) {
+        // IMU Tilt mode: flying keys are disabled so accidental key presses
+        // cannot fight or override handheld tilt control.
+        _kbRoll   = 0.0f;
+        _kbVert   = 0.0f;
+        finalRoll = imuRoll;
+        if (settings.imuMode == ImuMode::TILT_ALT) {
+            finalThr = imuTilt;
+        } else {
+            // TILT_SPD: tilt forward/back controls forward speed
+            finalThr   = 0.0f;
+            finalPitch = clampf(0.42f - imuTilt * 0.58f, 0.02f, 1.0f);
+        }
     } else {
-        // Classic TILT_SPD mode:
-        //   Tilt forward/back -> Forward Speed (pitch)
-        //   Up/Down arrows    -> Altitude (throttle)
-        finalThr   = _kbVert;
-        finalPitch = clampf(0.42f - imuTilt * 0.58f, 0.02f, 1.0f);
-        if (keys.brake) finalPitch = 0.05f;
+        // Keyboard flight mode (smooth, controlled sensitivity):
+        //   Left/Right -> X steering
+        //   Up/Down    -> Climb / Dive altitude
+        //   Shift      -> Brake
+        _kbRoll = stepKeyAxis(_kbRoll, keys.right, keys.left, KB_ROLL_MAX, KB_ROLL_RAMP, dt);
+        _kbVert = stepKeyAxis(_kbVert, keys.up,    keys.down, KB_VERT_MAX, KB_VERT_RAMP, dt);
+
+        finalRoll = _kbRoll;
+        finalThr  = _kbVert;
+        if (keys.brake) finalPitch = 0.08f;
     }
 
     outInput.roll      = clampf(finalRoll, -1.0f, 1.0f);
